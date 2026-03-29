@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
   Switch, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, FlatList,
@@ -7,7 +7,7 @@ import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
 import { UserRepo } from '../../repositories/UserRepo';
 import { ApprovalRuleRepo } from '../../repositories/ApprovalRepo';
-import { User } from '../../types';
+import { ApprovalConditionMode, User } from '../../types';
 
 interface ApproverEntry {
   user_id: number;
@@ -26,6 +26,8 @@ export default function ApprovalRuleFormScreen({ navigation, route }: any) {
   const [description, setDescription] = useState('');
   const [selectedManager, setSelectedManager] = useState<User | null>(null);
   const [managerIsApprover, setManagerIsApprover] = useState(false);
+  const [specificApprover, setSpecificApprover] = useState<User | null>(null);
+  const [conditionMode, setConditionMode] = useState<ApprovalConditionMode>('hybrid');
   const [sequential, setSequential] = useState(true);
   const [minApprovalPct, setMinApprovalPct] = useState('100');
   const [approvers, setApprovers] = useState<ApproverEntry[]>([]);
@@ -33,17 +35,66 @@ export default function ApprovalRuleFormScreen({ navigation, route }: any) {
   const [showUserPicker, setShowUserPicker] = useState(false);
   const [showManagerPicker, setShowManagerPicker] = useState(false);
   const [showApproverPicker, setShowApproverPicker] = useState(false);
+  const [showSpecificApproverPicker, setShowSpecificApproverPicker] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const simulatorLines = useMemo(() => {
+    const uniqueApprovers = new Set<number>(approvers.map(a => a.user_id));
+    if (managerIsApprover && selectedManager) uniqueApprovers.add(selectedManager.id);
+    const total = uniqueApprovers.size;
+    const threshold = Number.parseFloat(minApprovalPct) || 0;
+    const needed = total === 0 ? 0 : Math.ceil((threshold / 100) * total);
+
+    const lines: string[] = [];
+    lines.push(`Scenario A: 0/${total} approvals -> Pending`);
+
+    if (conditionMode === 'percentage' || conditionMode === 'hybrid') {
+      lines.push(`Scenario B: ${needed}/${total} approvals -> ${needed <= total ? 'Approved by percentage' : 'Rejected'}`);
+    }
+
+    if (conditionMode === 'specific_approver' || conditionMode === 'hybrid') {
+      lines.push(`Scenario C: ${specificApprover?.name ?? 'Specific approver'} approves -> Approved by specific approver`);
+    }
+
+    return lines;
+  }, [approvers, managerIsApprover, selectedManager, minApprovalPct, conditionMode, specificApprover]);
 
   useEffect(() => {
     const load = async () => {
       if (!session) return;
       const all = await UserRepo.findByCompany(session.company_id);
-      setUsers(all.filter(u => u.role !== 'admin'));
+      setUsers(all.filter(u => u.role === 'employee'));
       setManagers(all.filter(u => u.role !== 'employee'));
+
+      if (existingRule?.id) {
+        const fullRule = await ApprovalRuleRepo.findById(existingRule.id);
+        const ruleToUse = fullRule ?? existingRule;
+
+        const initialUser = all.find(u => u.id === ruleToUse.user_id) ?? null;
+        const initialManager = all.find(u => u.id === ruleToUse.manager_id) ?? null;
+
+        setSelectedUser(initialUser);
+        setDescription(ruleToUse.description ?? '');
+        setSelectedManager(initialManager);
+        setManagerIsApprover(Boolean(ruleToUse.manager_is_approver));
+        setConditionMode((ruleToUse.condition_mode as ApprovalConditionMode) ?? 'hybrid');
+        setSpecificApprover(all.find(u => u.id === ruleToUse.specific_approver_id) ?? null);
+        setSequential(Boolean(ruleToUse.sequential));
+        setMinApprovalPct(String(ruleToUse.min_approval_percentage ?? 100));
+        setApprovers(
+          (ruleToUse.approvers ?? []).map((a: any) => {
+            const approverUser = all.find(u => u.id === a.user_id);
+            return {
+              user_id: a.user_id,
+              name: approverUser?.name ?? a.approver_name ?? `User #${a.user_id}`,
+              required: Boolean(a.required),
+            };
+          })
+        );
+      }
     };
     load();
-  }, [session]);
+  }, [session, existingRule?.id]);
 
   const addApprover = (user: User) => {
     if (approvers.some(a => a.user_id === user.id)) {
@@ -67,18 +118,54 @@ export default function ApprovalRuleFormScreen({ navigation, route }: any) {
     if (!selectedManager) { Alert.alert('Required', 'Select a manager for this rule.'); return; }
     const pct = parseFloat(minApprovalPct);
     if (isNaN(pct) || pct < 0 || pct > 100) { Alert.alert('Invalid', 'Minimum approval % must be between 0–100.'); return; }
+    if ((conditionMode === 'specific_approver' || conditionMode === 'hybrid') && !specificApprover) {
+      Alert.alert('Required', 'Select a specific approver for this condition mode.');
+      return;
+    }
+    if (!managerIsApprover && approvers.length === 0 && !specificApprover) {
+      Alert.alert('Invalid Rule', 'Add at least one approver or enable manager approver.');
+      return;
+    }
+
+    const duplicateApprovers = new Set<number>();
+    for (const approver of approvers) {
+      if (duplicateApprovers.has(approver.user_id)) {
+        Alert.alert('Invalid Rule', 'Approvers list contains duplicate users.');
+        return;
+      }
+      duplicateApprovers.add(approver.user_id);
+    }
 
     setSaving(true);
     try {
-      const ruleId = await ApprovalRuleRepo.create({
+      const payload = {
         company_id: session!.company_id,
         user_id: selectedUser.id,
         description: description.trim() || `Approval rule for ${selectedUser.name}`,
         manager_id: selectedManager.id,
         manager_is_approver: managerIsApprover,
+        specific_approver_id: specificApprover?.id ?? null,
+        condition_mode: conditionMode,
         sequential,
         min_approval_percentage: pct,
-      });
+      };
+
+      let ruleId = existingRule?.id as number | undefined;
+      if (ruleId) {
+        await ApprovalRuleRepo.update(ruleId, {
+          user_id: payload.user_id,
+          description: payload.description,
+            manager_id: payload.manager_id,
+            manager_is_approver: payload.manager_is_approver,
+            specific_approver_id: payload.specific_approver_id,
+            condition_mode: payload.condition_mode,
+            sequential: payload.sequential,
+            min_approval_percentage: payload.min_approval_percentage,
+          });
+        await ApprovalRuleRepo.deleteApprovers(ruleId);
+      } else {
+        ruleId = await ApprovalRuleRepo.create(payload);
+      }
 
       for (let i = 0; i < approvers.length; i++) {
         await ApprovalRuleRepo.addApprover({
@@ -204,6 +291,37 @@ export default function ApprovalRuleFormScreen({ navigation, route }: any) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Approval Logic</Text>
 
+          <Text style={styles.label}>Conditional Mode</Text>
+          <View style={styles.roleRow}>
+            {([
+              { key: 'percentage', label: 'Percentage' },
+              { key: 'specific_approver', label: 'Specific' },
+              { key: 'hybrid', label: 'Hybrid' },
+            ] as { key: ApprovalConditionMode; label: string }[]).map(mode => (
+              <TouchableOpacity
+                key={mode.key}
+                style={[styles.roleOption, conditionMode === mode.key && styles.roleOptionActive]}
+                onPress={() => setConditionMode(mode.key)}
+              >
+                <Text style={[styles.roleOptionText, conditionMode === mode.key && styles.roleOptionTextActive]}>
+                  {mode.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {(conditionMode === 'specific_approver' || conditionMode === 'hybrid') ? (
+            <>
+              <Text style={styles.label}>Specific Approver (e.g. CFO)</Text>
+              <TouchableOpacity style={styles.selector} onPress={() => setShowSpecificApproverPicker(true)} activeOpacity={0.8}>
+                <Text style={specificApprover ? styles.selectorValue : styles.selectorPlaceholder}>
+                  {specificApprover ? specificApprover.name : 'Select specific approver...'}
+                </Text>
+                <Text style={styles.chevron}>▼</Text>
+              </TouchableOpacity>
+            </>
+          ) : null}
+
           <View style={styles.toggleRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>Approvers Sequence</Text>
@@ -236,6 +354,13 @@ export default function ApprovalRuleFormScreen({ navigation, route }: any) {
             />
             <Text style={styles.pctSign}>%</Text>
           </View>
+
+          <Text style={styles.label}>Policy Simulator (preview)</Text>
+          <View style={styles.simCard}>
+            {simulatorLines.map((line, idx) => (
+              <Text key={`${idx}-${line}`} style={styles.simText}>• {line}</Text>
+            ))}
+          </View>
         </View>
 
         <TouchableOpacity
@@ -244,7 +369,9 @@ export default function ApprovalRuleFormScreen({ navigation, route }: any) {
           disabled={saving}
           activeOpacity={0.85}
         >
-          {saving ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.saveBtnText}>Save Rule</Text>}
+          {saving
+            ? <ActivityIndicator color={Colors.white} />
+            : <Text style={styles.saveBtnText}>{existingRule?.id ? 'Update Rule' : 'Save Rule'}</Text>}
         </TouchableOpacity>
       </ScrollView>
 
@@ -252,8 +379,10 @@ export default function ApprovalRuleFormScreen({ navigation, route }: any) {
         onClose={() => setShowUserPicker(false)} onSelect={(u: User) => setSelectedUser(u)} />
       <UserPickerModal visible={showManagerPicker} title="Select Manager" data={managers}
         onClose={() => setShowManagerPicker(false)} onSelect={(u: User) => setSelectedManager(u)} />
-      <UserPickerModal visible={showApproverPicker} title="Add Approver" data={users}
+      <UserPickerModal visible={showApproverPicker} title="Add Approver" data={managers}
         onClose={() => setShowApproverPicker(false)} onSelect={addApprover} />
+      <UserPickerModal visible={showSpecificApproverPicker} title="Select Specific Approver" data={managers}
+        onClose={() => setShowSpecificApproverPicker(false)} onSelect={(u: User) => setSpecificApprover(u)} />
     </KeyboardAvoidingView>
   );
 }
@@ -282,6 +411,17 @@ const styles = StyleSheet.create({
   selectorPlaceholder: { fontSize: Typography.size.base, color: Colors.text.muted, flex: 1 },
   chevron: { color: Colors.text.muted, fontSize: 12 },
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing[4] },
+  roleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[2], marginBottom: Spacing[4] },
+  roleOption: {
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[2],
+  },
+  roleOptionActive: { borderColor: Colors.accent.primary, backgroundColor: Colors.accent.light },
+  roleOptionText: { fontSize: Typography.size.sm, color: Colors.text.secondary },
+  roleOptionTextActive: { color: Colors.accent.secondary, fontWeight: Typography.weight.semibold },
   approverRow: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.bg.elevated,
     borderRadius: Radius.md, padding: Spacing[3], marginBottom: Spacing[2], gap: Spacing[2],
@@ -303,6 +443,15 @@ const styles = StyleSheet.create({
   addApproverText: { color: Colors.accent.secondary, fontSize: Typography.size.sm, fontWeight: Typography.weight.medium },
   pctRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing[2] },
   pctSign: { fontSize: Typography.size.xl, color: Colors.text.secondary, fontWeight: Typography.weight.bold },
+  simCard: {
+    marginTop: Spacing[2],
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.bg.elevated,
+    padding: Spacing[3],
+  },
+  simText: { color: Colors.text.secondary, fontSize: Typography.size.xs, marginBottom: 4 },
   saveBtn: {
     backgroundColor: Colors.accent.primary, borderRadius: Radius.md, padding: Spacing[4],
     alignItems: 'center', marginTop: Spacing[2],

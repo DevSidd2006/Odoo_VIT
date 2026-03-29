@@ -8,9 +8,11 @@ import { CompanyRepo } from '../../repositories/CompanyRepo';
 import { UserRepo } from '../../repositories/UserRepo';
 import { useAuth } from '../../context/AuthContext';
 import { COUNTRIES } from '../../utils/constants';
+import { CurrencyService } from '../../services/CurrencyService';
 
 export default function SignupScreen({ navigation }: any) {
   const { signIn } = useAuth();
+  const [countries, setCountries] = useState(COUNTRIES);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,8 +21,27 @@ export default function SignupScreen({ navigation }: any) {
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingCountries, setLoadingCountries] = useState(false);
 
-  const filteredCountries = COUNTRIES.filter(c =>
+  React.useEffect(() => {
+    const loadCountries = async () => {
+      setLoadingCountries(true);
+      try {
+        const data = await CurrencyService.fetchCountries();
+        if (data.length > 0) {
+          setCountries(data);
+        }
+      } catch (e) {
+        console.warn('[Signup] Failed to load countries, using static fallback', e);
+      } finally {
+        setLoadingCountries(false);
+      }
+    };
+
+    loadCountries();
+  }, []);
+
+  const filteredCountries = countries.filter(c =>
     c.name.toLowerCase().includes(countrySearch.toLowerCase())
   );
 
@@ -146,6 +167,18 @@ export default function SignupScreen({ navigation }: any) {
             <FlatList
               data={filteredCountries}
               keyExtractor={item => item.code}
+              ListEmptyComponent={
+                loadingCountries ? (
+                  <View style={{ paddingVertical: Spacing[5], alignItems: 'center' }}>
+                    <ActivityIndicator color={Colors.accent.primary} />
+                    <Text style={{ color: Colors.text.muted, marginTop: 8 }}>Loading countries...</Text>
+                  </View>
+                ) : (
+                  <View style={{ paddingVertical: Spacing[5], alignItems: 'center' }}>
+                    <Text style={{ color: Colors.text.muted }}>No countries found</Text>
+                  </View>
+                )
+              }
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.countryItem}

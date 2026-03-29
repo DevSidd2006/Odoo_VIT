@@ -9,7 +9,6 @@ export type ExpenseStatus =
   | 'pending';
 
 export type ApprovalRequestStatus = 'pending' | 'approved' | 'rejected' | 'skipped';
-export type ApprovalConditionMode = 'percentage' | 'specific_approver' | 'hybrid';
 
 export interface Company {
   id: number;
@@ -79,10 +78,15 @@ export interface ApprovalRule {
   manager_id: number;
   manager_is_approver: number | boolean;
   specific_approver_id?: number | null;
-  condition_mode?: ApprovalConditionMode;
   sequential: number | boolean;
   min_approval_percentage: number;
   created_at?: string;
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  icon: string;
 }
 
 export interface ApprovalRuleApprover {
@@ -131,36 +135,6 @@ export interface ExchangeRates {
   base: string;
   rates: Record<string, number>;
   fetched_at: string;
-  provider?: string;
-  source?: 'live_api' | 'cache';
-  is_stale?: boolean;
-}
-
-export interface ApprovalEvent {
-  id: number;
-  expense_id: number;
-  rule_id: number;
-  event_type: string;
-  message: string;
-  snapshot_json?: string;
-  created_at: string;
-}
-
-export interface ApprovalExplanation {
-  ruleDescription: string;
-  conditionMode: ApprovalConditionMode;
-  totalApprovers: number;
-  approvedCount: number;
-  rejectedCount: number;
-  pendingCount: number;
-  approvalPercent: number;
-  thresholdPercent: number;
-  percentageMet: boolean;
-  specificApproverName?: string;
-  specificApproverApproved: boolean;
-  requiredRejected: boolean;
-  decision: 'pending' | 'approved' | 'rejected';
-  reason: string;
 }
 
 export interface Country {

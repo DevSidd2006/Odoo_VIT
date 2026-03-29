@@ -54,7 +54,7 @@ export default function MyExpensesScreen() {
     <View style={styles.container}>
       <FlatList
         data={expenses}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => <ExpenseItem expense={item} />}
         contentContainerStyle={styles.list}
         ListEmptyComponent={

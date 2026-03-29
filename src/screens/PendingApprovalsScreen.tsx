@@ -30,7 +30,7 @@ export default function PendingApprovalsScreen() {
         {
           text: 'Approve',
           onPress: async () => {
-            await approveExpense(expense.id, user?.name || '');
+             await approveExpense(String(expense.id), user?.name || '');
             Alert.alert('Success', 'Expense approved');
           },
         },
@@ -64,7 +64,7 @@ export default function PendingApprovalsScreen() {
       <View style={styles.actions}>
         <TouchableOpacity
           style={[styles.button, styles.rejectButton]}
-          onPress={() => setRejectingId(expense.id)}
+           onPress={() => setRejectingId(String(expense.id))}
         >
           <Text style={styles.rejectButtonText}>Reject</Text>
         </TouchableOpacity>
@@ -83,7 +83,7 @@ export default function PendingApprovalsScreen() {
     <View style={styles.container}>
       <FlatList
         data={pending}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => <ExpenseCard expense={item} />}
         contentContainerStyle={styles.list}
         ListEmptyComponent={

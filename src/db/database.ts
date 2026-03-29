@@ -80,11 +80,23 @@ export const initDatabase = async (): Promise<void> => {
       description TEXT NOT NULL DEFAULT '',
       manager_id INTEGER NOT NULL REFERENCES users(id),
       manager_is_approver INTEGER NOT NULL DEFAULT 0,
+      specific_approver_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      condition_mode TEXT NOT NULL DEFAULT 'hybrid' CHECK(condition_mode IN ('percentage','specific_approver','hybrid')),
       sequential INTEGER NOT NULL DEFAULT 1,
       min_approval_percentage REAL NOT NULL DEFAULT 100,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  const approvalRuleColumns = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(approval_rules);`);
+  const hasSpecificApprover = approvalRuleColumns.some(c => c.name === 'specific_approver_id');
+  if (!hasSpecificApprover) {
+    await db.execAsync(`ALTER TABLE approval_rules ADD COLUMN specific_approver_id INTEGER REFERENCES users(id) ON DELETE SET NULL;`);
+  }
+  const hasConditionMode = approvalRuleColumns.some(c => c.name === 'condition_mode');
+  if (!hasConditionMode) {
+    await db.execAsync(`ALTER TABLE approval_rules ADD COLUMN condition_mode TEXT NOT NULL DEFAULT 'hybrid';`);
+  }
 
   // ── Approval Rule Approvers ────────────────────────────────────────────────
   await db.execAsync(`
@@ -107,6 +119,25 @@ export const initDatabase = async (): Promise<void> => {
       order_index INTEGER NOT NULL DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','skipped')),
       acted_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  const approvalRequestColumns = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(approval_requests);`);
+  const hasDecisionComment = approvalRequestColumns.some(c => c.name === 'decision_comment');
+      if (!hasDecisionComment) {
+    await db.execAsync(`ALTER TABLE approval_requests ADD COLUMN decision_comment TEXT NOT NULL DEFAULT '';`);
+  }
+
+  // ── Approval Events (Explainable Approval Graph) ───────────────────────────
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS approval_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      expense_id INTEGER NOT NULL REFERENCES expenses(id) ON DELETE CASCADE,
+      rule_id INTEGER NOT NULL REFERENCES approval_rules(id) ON DELETE CASCADE,
+      event_type TEXT NOT NULL,
+      message TEXT NOT NULL,
+      snapshot_json TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);

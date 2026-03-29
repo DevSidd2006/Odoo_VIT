@@ -1,0 +1,267 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { ApprovalRuleRepo } from '../../repositories/ApprovalRepo';
+import { UserRepo } from '../../repositories/UserRepo';
+
+export default function ApprovalRules() {
+  const { session } = useAuth();
+  const [rules, setRules] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    user_id: 0,
+    description: '',
+    manager_is_approver: true,
+    specific_approver_id: null as number | null,
+    sequential: true,
+    min_approval_percentage: 100,
+    approvers: [] as { user_id: number; required: boolean; order_index: number }[]
+  });
+
+  const refresh = async () => {
+    if (!session) return;
+    setLoading(true);
+    try {
+      const data = await ApprovalRuleRepo.findByCompany(session.company_id);
+      const allUsers = await UserRepo.findByCompany(session.company_id);
+      setRules(data);
+      setUsers(allUsers);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [session]);
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Delete this rule?')) {
+      await ApprovalRuleRepo.delete(id);
+      refresh();
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.user_id || !form.description) return;
+
+    // We do not have manager_id in form directly, we fetch from the user selected
+    const selectedUser = users.find(u => u.id === form.user_id);
+    const managerId = selectedUser?.manager_id || 0;
+
+    if (form.manager_is_approver && !managerId) {
+      alert('Selected employee has no manager assigned. Either set manager relationship first or uncheck manager approver.');
+      return;
+    }
+    
+    const ruleId = await ApprovalRuleRepo.create({
+      company_id: session!.company_id,
+      user_id: form.user_id,
+      description: form.description,
+      manager_id: managerId,
+      manager_is_approver: form.manager_is_approver,
+      specific_approver_id: form.specific_approver_id,
+      sequential: form.sequential,
+      min_approval_percentage: form.min_approval_percentage,
+    });
+
+    for (const a of form.approvers) {
+      await ApprovalRuleRepo.addApprover({
+        rule_id: ruleId,
+        user_id: a.user_id,
+        order_index: a.order_index,
+        required: a.required
+      });
+    }
+
+    setShowForm(false);
+    refresh();
+  };
+
+  const addApproverToForm = (userId: number) => {
+    if (!userId) return;
+    setForm(prev => ({
+      ...prev,
+      approvers: [...prev.approvers, { user_id: userId, required: false, order_index: prev.approvers.length }]
+    }));
+  };
+
+  const removeApproverFromForm = (index: number) => {
+    setForm(prev => ({
+      ...prev,
+      approvers: prev.approvers.filter((_, i) => i !== index)
+    }));
+  };
+
+  const toggleApproverRequired = (index: number) => {
+    setForm(prev => {
+      const newApprovers = [...prev.approvers];
+      newApprovers[index].required = !newApprovers[index].required;
+      return { ...prev, approvers: newApprovers };
+    });
+  };
+
+  return (
+    <div>
+      <div style={styles.header}>
+        <div>
+          <h2>Policy & Rules</h2>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Configure explainable approval paths for employees.</p>
+        </div>
+        <button style={styles.addBtn} onClick={() => setShowForm(true)}>+ New Policy</button>
+      </div>
+
+      {loading ? <p>Loading...</p> : (
+        <div style={styles.grid}>
+          {rules.map(r => (
+            <div key={r.id} style={styles.card}>
+              <div style={styles.cardHeader}>
+                <div>
+                  <div style={styles.ruleTitle}>{r.description}</div>
+                  <div style={styles.ruleUser}>Applies to: {r.user_name}</div>
+                </div>
+                <button style={styles.deleteBtn} onClick={() => handleDelete(r.id)}>🗑️</button>
+              </div>
+
+              <div style={styles.tags}>
+                <span style={styles.tag}>{r.sequential ? '📋 Sequential' : '⚡ Parallel'}</span>
+                {r.manager_is_approver && <span style={styles.tag}>👔 Direct Manager First</span>}
+                {r.specific_approver_id ? (
+                  <span style={styles.tag}>⭐ Specific approver enabled</span>
+                ) : null}
+                {r.min_approval_percentage < 100 && (
+                  <span style={styles.tagWarning}>⚖️ {r.min_approval_percentage}% Threshold</span>
+                )}
+              </div>
+              
+              <div style={styles.simulatorBtn} onClick={() => alert('Simulator UI coming soon')}>
+                🔮 Run Policy Simulator
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showForm && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <div style={styles.modalHeader}>
+              <h3>Create Policy Rule</h3>
+              <button style={styles.closeBtn} type="button" onClick={() => setShowForm(false)}>✕</button>
+            </div>
+            
+            <form onSubmit={handleCreate}>
+              <div style={styles.field}>
+                <label style={styles.label}>Policy Name</label>
+                <input style={styles.input} required value={form.description} onChange={e => setForm({...form, description: e.target.value})} placeholder="e.g. Standard Travel Rule" />
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>Applies To (Employee)</label>
+                <select style={styles.input} required value={form.user_id || ''} onChange={e => setForm({...form, user_id: Number(e.target.value)})}>
+                  <option value="">Select an employee...</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={styles.row}>
+                <label style={styles.checkbox}>
+                  <input type="checkbox" checked={form.sequential} onChange={e => setForm({...form, sequential: e.target.checked})} />
+                  Sequential Routing (One by One)
+                </label>
+                <label style={styles.checkbox}>
+                  <input type="checkbox" checked={form.manager_is_approver} onChange={e => setForm({...form, manager_is_approver: e.target.checked})} />
+                  Direct Manager Must Approve First
+                </label>
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>Specific Approver Auto-Approve (Optional)</label>
+                <select
+                  style={styles.input}
+                  value={form.specific_approver_id || ''}
+                  onChange={e => setForm({
+                    ...form,
+                    specific_approver_id: e.target.value ? Number(e.target.value) : null,
+                  })}
+                >
+                  <option value="">None</option>
+                  {users.filter(u => u.role !== 'employee').map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  If selected approver approves, expense is auto-approved immediately.
+                </span>
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>Approval Threshold (%)</label>
+                <input type="number" min="1" max="100" style={styles.input} value={form.min_approval_percentage} onChange={e => setForm({...form, min_approval_percentage: Number(e.target.value)})} />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Set &lt; 100 to allow partial approvals (e.g., 50% = 1 out of 2 approvers).</span>
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>Additional Approvers</label>
+                {form.approvers.map((a, i) => {
+                  const u = users.find(x => x.id === a.user_id);
+                  return (
+                    <div key={i} style={styles.approverRow}>
+                      <span style={{ flex: 1 }}>{u?.name}</span>
+                      <label style={styles.checkbox}>
+                        <input type="checkbox" checked={a.required} onChange={() => toggleApproverRequired(i)} /> Required
+                      </label>
+                      <button type="button" style={styles.removeBtn} onClick={() => removeApproverFromForm(i)}>✕</button>
+                    </div>
+                  );
+                })}
+                <select 
+                  style={{ ...styles.input, marginTop: '8px' }} 
+                  value="" 
+                  onChange={e => addApproverToForm(Number(e.target.value))}
+                >
+                  <option value="">+ Add an approver...</option>
+                  {users.filter(u => u.role !== 'employee' && u.id !== form.user_id).map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button type="submit" style={styles.submitBtn}>Save Policy</button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const styles: Record<string, any> = {
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
+  addBtn: { backgroundColor: 'var(--accent-primary)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' },
+  card: { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column' },
+  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' },
+  ruleTitle: { fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' },
+  ruleUser: { fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' },
+  deleteBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' },
+  tags: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' },
+  tag: { backgroundColor: 'var(--bg-elevated)', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', color: 'var(--text-secondary)' },
+  tagWarning: { backgroundColor: 'var(--status-warning-bg)', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', color: 'var(--status-warning)' },
+  simulatorBtn: { backgroundColor: 'var(--accent-light)', color: 'var(--accent-secondary)', padding: '10px', borderRadius: '8px', textAlign: 'center', fontWeight: 600, cursor: 'pointer', fontSize: '14px', marginTop: 'auto' },
+  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+  modalContent: { backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '500px', border: '1px solid var(--border-default)', maxHeight: '90vh', overflowY: 'auto' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
+  closeBtn: { background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '20px', cursor: 'pointer' },
+  field: { marginBottom: '20px', display: 'flex', flexDirection: 'column' },
+  label: { fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: 500 },
+  input: { backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', padding: '10px', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' },
+  row: { display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px', padding: '12px', backgroundColor: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-default)' },
+  checkbox: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer' },
+  approverRow: { display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: 'var(--bg-elevated)', padding: '8px 12px', borderRadius: '6px', marginBottom: '8px', border: '1px solid var(--border-default)' },
+  removeBtn: { background: 'none', border: 'none', color: 'var(--status-error)', cursor: 'pointer' },
+  submitBtn: { backgroundColor: 'var(--accent-primary)', color: '#fff', border: 'none', padding: '14px', borderRadius: '8px', width: '100%', fontWeight: 600, marginTop: '8px', cursor: 'pointer' },
+};

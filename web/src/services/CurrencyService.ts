@@ -1,5 +1,5 @@
-import { getDb } from '../db/database';
-import { ExchangeRates, Country } from '../types';
+import { db } from '../db/database';
+import type { ExchangeRates, Country } from '../types';
 
 const CACHE_HOURS = 24;
 // Official APIs per problem statement
@@ -8,24 +8,14 @@ const COUNTRIES_URL = 'https://restcountries.com/v3.1/all?fields=name,currencies
 
 export const CurrencyService = {
   async getRates(baseCurrency: string): Promise<ExchangeRates> {
-    const db = getDb();
-    const cached = await db.getFirstAsync<{ rates_json: string; fetched_at: string }>(
-      `SELECT rates_json, fetched_at FROM exchange_rate_cache
-       WHERE base_currency = ? ORDER BY fetched_at DESC LIMIT 1`,
-      [baseCurrency]
-    );
+    const caches = await db.exchange_rate_cache.where('base_currency').equals(baseCurrency).toArray();
+    caches.sort((a, b) => new Date(b.fetched_at).getTime() - new Date(a.fetched_at).getTime());
+    const cached = caches[0];
 
     if (cached) {
       const ageHours = (Date.now() - new Date(cached.fetched_at).getTime()) / 3_600_000;
       if (ageHours < CACHE_HOURS) {
-        return {
-          base: baseCurrency,
-          rates: JSON.parse(cached.rates_json),
-          fetched_at: cached.fetched_at,
-          provider: 'api.exchangerate-api.com',
-          source: 'cache',
-          is_stale: false,
-        };
+        return { base: baseCurrency, rates: JSON.parse(cached.rates_json), fetched_at: cached.fetched_at };
       }
     }
 
@@ -37,35 +27,25 @@ export const CurrencyService = {
       const rates: Record<string, number> = data.rates ?? {};
       const fetchedAt = new Date().toISOString();
 
-      await db.runAsync(
-        `INSERT INTO exchange_rate_cache (base_currency, rates_json, fetched_at) VALUES (?, ?, ?)`,
-        [baseCurrency, JSON.stringify(rates), fetchedAt]
-      );
-      await db.runAsync(
-        `DELETE FROM exchange_rate_cache WHERE base_currency = ? AND id NOT IN
-         (SELECT id FROM exchange_rate_cache WHERE base_currency = ? ORDER BY fetched_at DESC LIMIT 3)`,
-        [baseCurrency, baseCurrency]
-      );
+      await db.exchange_rate_cache.add({
+        base_currency: baseCurrency,
+        rates_json: JSON.stringify(rates),
+        fetched_at: fetchedAt
+      });
+      
+      // Cleanup old cache entries keeping last 3
+      const allForBase = await db.exchange_rate_cache.where('base_currency').equals(baseCurrency).toArray();
+      allForBase.sort((a, b) => new Date(b.fetched_at).getTime() - new Date(a.fetched_at).getTime());
+      if (allForBase.length > 3) {
+        const toDelete = allForBase.slice(3).map(c => c.id!);
+        await db.exchange_rate_cache.bulkDelete(toDelete);
+      }
 
-      return {
-        base: baseCurrency,
-        rates,
-        fetched_at: fetchedAt,
-        provider: 'api.exchangerate-api.com',
-        source: 'live_api',
-        is_stale: false,
-      };
+      return { base: baseCurrency, rates, fetched_at: fetchedAt };
     } catch (err) {
       if (cached) {
         console.warn('[Currency] Using stale cache:', err);
-        return {
-          base: baseCurrency,
-          rates: JSON.parse(cached.rates_json),
-          fetched_at: cached.fetched_at,
-          provider: 'api.exchangerate-api.com',
-          source: 'cache',
-          is_stale: true,
-        };
+        return { base: baseCurrency, rates: JSON.parse(cached.rates_json), fetched_at: cached.fetched_at };
       }
       throw new Error(`No exchange rates available: ${err}`);
     }

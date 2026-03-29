@@ -96,9 +96,25 @@ export default function ApprovalRulesScreen({ navigation }: any) {
                   </View>
                 ) : null}
                 {item.min_approval_percentage < 100 ? (
-                  <View style={[styles.tag, { backgroundColor: Colors.status.warningBg }]}>
-                    <Text style={[styles.tagText, { color: Colors.status.warning }]}>
+                  <View style={[styles.tag, { backgroundColor: Colors.status.warningBg }]}> 
+                    <Text style={[styles.tagText, { color: Colors.status.warning }]}> 
                       {item.min_approval_percentage}% threshold
+                    </Text>
+                  </View>
+                ) : null}
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>
+                    {item.condition_mode === 'percentage'
+                      ? '📊 Percentage'
+                      : item.condition_mode === 'specific_approver'
+                        ? '🎯 Specific approver'
+                        : '🧠 Hybrid'}
+                  </Text>
+                </View>
+                {item.specific_approver_name ? (
+                  <View style={[styles.tag, { backgroundColor: Colors.accent.light }]}> 
+                    <Text style={[styles.tagText, { color: Colors.accent.secondary }]}> 
+                      👤 {item.specific_approver_name}
                     </Text>
                   </View>
                 ) : null}

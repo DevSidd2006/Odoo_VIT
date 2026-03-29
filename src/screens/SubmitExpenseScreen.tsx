@@ -8,10 +8,12 @@ import {
   ScrollView,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { useExpenses } from '../context/ExpenseContext';
+import { OCRService, ExtractedReceiptData } from '../services/OCRService';
 
 const CATEGORIES = [
   'Meals',
@@ -22,7 +24,7 @@ const CATEGORIES = [
   'Other',
 ];
 
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD'];
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'INR', 'CNY'];
 
 export default function SubmitExpenseScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -34,6 +36,8 @@ export default function SubmitExpenseScreen({ navigation }: any) {
   const [description, setDescription] = useState('');
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [ocrData, setOcrData] = useState<ExtractedReceiptData | null>(null);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -44,7 +48,51 @@ export default function SubmitExpenseScreen({ navigation }: any) {
     });
 
     if (!result.canceled) {
-      setReceiptUri(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setReceiptUri(uri);
+
+      // Trigger OCR scan
+      setScanning(true);
+      try {
+        const extractedData = await OCRService.scanReceipt(uri);
+        setOcrData(extractedData);
+
+        // Auto-fill fields if extraction was successful
+        if (extractedData.amount) {
+          setAmount(extractedData.amount.toString());
+        }
+        if (extractedData.currency && CURRENCIES.includes(extractedData.currency)) {
+          setCurrency(extractedData.currency);
+        }
+        if (extractedData.date) {
+          // Auto-filled but not shown in this simple form
+        }
+        if (extractedData.description) {
+          setDescription(extractedData.description);
+        }
+        if (extractedData.merchant) {
+          // Try to guess category from merchant name
+          const merchantLower = extractedData.merchant.toLowerCase();
+          if (merchantLower.includes('restaurant') || merchantLower.includes('cafe') || merchantLower.includes('food')) {
+            setCategory('Meals');
+          } else if (merchantLower.includes('hotel') || merchantLower.includes('travel')) {
+            setCategory('Travel');
+          } else if (merchantLower.includes('uber') || merchantLower.includes('taxi') || merchantLower.includes('transport')) {
+            setCategory('Transportation');
+          }
+        }
+
+        // Show feedback to user
+        Alert.alert(
+          'Receipt Scanned',
+          `Extracted:\n• Amount: ${extractedData.currency || 'USD'} ${extractedData.amount?.toFixed(2) || 'N/A'}\n• Merchant: ${extractedData.merchant || 'N/A'}\n\nConfidence: ${extractedData.confidence}%`,
+          [{ text: 'OK' }]
+        );
+      } catch (error) {
+        Alert.alert('OCR Error', 'Failed to extract data from receipt. Please enter manually.');
+      } finally {
+        setScanning(false);
+      }
     }
   };
 
@@ -129,8 +177,14 @@ export default function SubmitExpenseScreen({ navigation }: any) {
         />
 
         <Text style={styles.label}>Receipt</Text>
-        <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-          {receiptUri ? (
+        <TouchableOpacity style={styles.uploadButton} onPress={pickImage} disabled={scanning}>
+          {scanning ? (
+            <View style={styles.scanningContainer}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <Text style={styles.scanningText}>Scanning receipt...</Text>
+              <Text style={styles.scanningSubtext}>Extracting details with OCR</Text>
+            </View>
+          ) : receiptUri ? (
             <Image source={{ uri: receiptUri }} style={styles.receiptImage} />
           ) : (
             <>
@@ -142,6 +196,17 @@ export default function SubmitExpenseScreen({ navigation }: any) {
             </>
           )}
         </TouchableOpacity>
+
+        {ocrData && (
+          <View style={styles.ocrResultBox}>
+            <Text style={styles.ocrResultTitle}>✓ OCR Extracted Data</Text>
+            <Text style={styles.ocrResultText}>
+              Amount: {ocrData.currency} {ocrData.amount?.toFixed(2)}{'\n'}
+              Merchant: {ocrData.merchant}{'\n'}
+              Confidence: {ocrData.confidence}%
+            </Text>
+          </View>
+        )}
       </View>
 
       <TouchableOpacity
@@ -255,6 +320,38 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 8,
     resizeMode: 'cover',
+  },
+  scanningContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  scanningText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginTop: 12,
+  },
+  scanningSubtext: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 4,
+  },
+  ocrResultBox: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
+  },
+  ocrResultTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2E7D32',
+    marginBottom: 8,
+  },
+  ocrResultText: {
+    fontSize: 13,
+    color: '#1B5E20',
+    lineHeight: 20,
   },
   submitButton: {
     backgroundColor: '#007AFF',
