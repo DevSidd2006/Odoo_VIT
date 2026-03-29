@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { ApprovalRuleRepo } from '../../repositories/ApprovalRepo';
 import { UserRepo } from '../../repositories/UserRepo';
@@ -26,6 +26,36 @@ export default function ApprovalRules() {
 
   const employeeUsers = users.filter(u => u.role === 'employee');
   const approverCandidates = users.filter(u => u.role !== 'employee');
+
+  const policyHealth = useMemo(() => {
+    const selectedUser = employeeUsers.find(u => u.id === form.user_id);
+    const managerId = selectedUser?.manager_id || 0;
+    const effectiveManagerId = form.override_manager_id || managerId;
+    const hasManagerPath = !form.manager_is_approver || Boolean(effectiveManagerId);
+    const hasAnyApprover = form.manager_is_approver || form.approvers.length > 0;
+
+    if (!form.user_id || !form.description.trim() || !hasAnyApprover || !hasManagerPath) {
+      return {
+        status: 'red',
+        label: 'Red',
+        message: 'Rule is incomplete. Add required fields and a valid approver path before saving.',
+      };
+    }
+
+    if (form.min_approval_percentage < 100 || !form.sequential || form.approvers.some(a => !a.required)) {
+      return {
+        status: 'amber',
+        label: 'Amber',
+        message: 'Rule is valid but permissive. Review thresholds and required approvers carefully.',
+      };
+    }
+
+    return {
+      status: 'green',
+      label: 'Green',
+      message: 'Rule is strict and fully defined.',
+    };
+  }, [employeeUsers, form]);
 
   const refresh = async () => {
     if (!session) return;
@@ -290,6 +320,14 @@ export default function ApprovalRules() {
                 </select>
               </div>
 
+              <div style={styles.healthBox(policyHealth.status)}>
+                <div style={styles.healthTop}>
+                  <strong>Policy Health</strong>
+                  <span style={styles.healthBadge(policyHealth.status)}>{policyHealth.label}</span>
+                </div>
+                <div style={styles.healthText}>{policyHealth.message}</div>
+              </div>
+
               <button type="submit" style={styles.submitBtn}>Save Policy</button>
             </form>
           </div>
@@ -323,5 +361,23 @@ const styles: Record<string, any> = {
   checkbox: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer' },
   approverRow: { display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: 'var(--bg-elevated)', padding: '8px 12px', borderRadius: '6px', marginBottom: '8px', border: '1px solid var(--border-default)' },
   removeBtn: { background: 'none', border: 'none', color: 'var(--status-error)', cursor: 'pointer' },
+  healthBox: (status: 'green' | 'amber' | 'red') => ({
+    border: '1px solid var(--border-default)',
+    backgroundColor: status === 'green' ? 'var(--status-success-bg)' : status === 'amber' ? 'var(--status-warning-bg)' : 'var(--status-error-bg)',
+    borderRadius: '10px',
+    padding: '10px 12px',
+    marginBottom: '8px',
+  }),
+  healthTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' },
+  healthBadge: (status: 'green' | 'amber' | 'red') => ({
+    fontSize: '11px',
+    fontWeight: 700,
+    borderRadius: 999,
+    padding: '2px 8px',
+    color: status === 'green' ? 'var(--status-success)' : status === 'amber' ? 'var(--status-warning)' : 'var(--status-error)',
+    backgroundColor: 'var(--bg-card)',
+    border: '1px solid var(--border-default)',
+  }),
+  healthText: { fontSize: '12px', color: 'var(--text-secondary)' },
   submitBtn: { backgroundColor: 'var(--accent-primary)', color: '#fff', border: 'none', padding: '14px', borderRadius: '8px', width: '100%', fontWeight: 600, marginTop: '8px', cursor: 'pointer' },
 };

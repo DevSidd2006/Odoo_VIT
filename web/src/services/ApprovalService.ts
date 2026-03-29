@@ -1,5 +1,6 @@
 import { ExpenseRepo } from '../repositories/ExpenseRepo';
 import { ApprovalRuleRepo, ApprovalRequestRepo } from '../repositories/ApprovalRepo';
+import { UserRepo } from '../repositories/UserRepo';
 import type { ApprovalExplanation } from '../types';
 
 type ApprovalPlanStep = {
@@ -57,6 +58,25 @@ const getMode = (rule: any): 'percentage' | 'specific' | 'hybrid' => {
   if (hasSpecificApprover && rule.min_approval_percentage < 100) return 'hybrid';
   if (hasSpecificApprover && rule.min_approval_percentage >= 100) return 'specific';
   return 'percentage';
+};
+
+const isEligibleApproverRole = (role: string | undefined): boolean => {
+  return role === 'admin' || role === 'manager';
+};
+
+const resolveEligibleApprovers = async (rule: any, employeeId: number): Promise<ApprovalPlanStep[]> => {
+  const rawPlan = buildApprovalPlan(rule);
+  const eligible: ApprovalPlanStep[] = [];
+
+  for (const step of rawPlan) {
+    const approver = await UserRepo.findById(step.approver_id);
+    if (!approver) continue;
+    if (approver.id === employeeId) continue;
+    if (!isEligibleApproverRole(approver.role)) continue;
+    eligible.push(step);
+  }
+
+  return dedupePlan(eligible);
 };
 
 const buildExplanation = async (expenseId: number, ruleId: number): Promise<ApprovalExplanation | null> => {
@@ -226,7 +246,7 @@ export const ApprovalService = {
       return;
     }
 
-    const approvers = buildApprovalPlan(rule);
+    const approvers = await resolveEligibleApprovers(rule, employeeId);
 
     if (rule.specific_approver_id) {
       const specificInPlan = approvers.some(step => step.approver_id === rule.specific_approver_id);
@@ -236,8 +256,7 @@ export const ApprovalService = {
     }
 
     if (approvers.length === 0) {
-      await ExpenseRepo.updateStatus(expenseId, 'approved');
-      return;
+      throw new Error('Rule misconfiguration: no valid approvers assigned. Please assign a manager/admin approver.');
     }
 
     if (rule.sequential) {
@@ -282,6 +301,15 @@ export const ApprovalService = {
     
     if (!targetRequest || targetRequest.approver_id !== actorId) {
       throw new Error(`[Security] Unauthorized: Actor ${actorId} is not assigned to this request.`);
+    }
+
+    const actor = await UserRepo.findById(actorId);
+    if (!actor || !isEligibleApproverRole(actor.role)) {
+      throw new Error('[Security] Unauthorized: only manager/admin approvers can make approval decisions.');
+    }
+
+    if (expense.employee_id === actorId) {
+      throw new Error('[Security] Unauthorized: requester cannot approve their own expense.');
     }
 
     if (targetRequest.status !== 'pending') {

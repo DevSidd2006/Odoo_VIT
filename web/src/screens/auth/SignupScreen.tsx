@@ -85,7 +85,7 @@ export default function SignupScreen() {
     <div style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>Admin (Company) Signup</h2>
-        <p style={{ color: 'var(--status-error)', fontSize: '13px', margin: '-16px 0 24px 0' }}>1 admin user per company</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '-16px 0 24px 0' }}>1 admin user per company</p>
 
         {error && <div style={styles.errorBanner}>{error}</div>}
 

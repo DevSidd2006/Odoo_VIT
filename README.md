@@ -1,48 +1,51 @@
-# Reimbursement Management (Web App)
+# ReimburseFlow (Web System)
 
-This repository contains a **web-based reimbursement management app** built with React + Vite (inside `web/`).
+A complete role-based reimbursement system with explainable approvals.
 
-It supports role-based workflows:
+## What this system does
 
-- Admin: user management + approval policy setup
-- Manager: pending approvals with comments and currency-aware review
-- Employee: draft expenses, submit for approval, track status
+- Employees create expense drafts and submit them.
+- Managers review pending requests and approve or reject with comments.
+- Admins manage users, configure approval rules, and apply emergency overrides.
+- Approval outcomes are explainable (mode, approval count, percentage, and reason).
 
-## App location
+## Core workflow
 
-- Main web app: `web/`
-- There is also a React Native codebase in root `src/`, but this README is for the web app workflow.
+1. Admin signs up a company (country sets base currency).
+2. Admin creates team members (manager and employee) and approval rules.
+3. Employee submits an expense.
+4. Manager receives pending request and decides.
+5. System finalizes status based on rule logic (or admin override).
 
-## Implemented features (web)
+## Approval model (high level)
 
-- Authentication + persisted session (`localStorage`)
-- Company signup with country selection and base currency assignment
-- Admin dashboard:
-  - Create/manage employees and managers
-  - Set manager relationships
-  - Configure approval rules (manager approver, additional approvers, threshold, specific approver)
-  - Policy simulator entry point
-- Employee dashboard:
-  - Create expense drafts
-  - Submit draft to approval flow
-  - View own expense status/history
-- Manager dashboard:
-  - View pending approvals
-  - Approve/reject with comment
-  - See converted amount in company base currency
-- Local data persistence via Dexie/IndexedDB repositories
+- Supports manager-first, sequential/parallel approvers, required approvers, and minimum approval percentage.
+- Supports specific approver rules.
+- Hybrid mode combines absolute checks (required/specific) with percentage threshold.
 
 ## Tech stack
 
-- React 19
-- TypeScript
-- Vite
+- React + TypeScript + Vite
 - React Router
-- Dexie (IndexedDB)
-- Zustand
-- Tesseract.js (available dependency for OCR-related extensions)
+- Dexie (IndexedDB local persistence)
+- Tesseract.js (receipt OCR in employee flow)
 
-## Quick start
+## External APIs
+
+- Countries and currencies: https://restcountries.com/v3.1/all?fields=name,currencies,cca2,flag
+- Exchange rates: https://api.exchangerate-api.com/v4/latest/{BASE}
+
+Resilience behavior:
+
+- Country API failure falls back to static country constants.
+- Exchange API failure falls back to cached IndexedDB rates when available.
+
+## Project structure
+
+- `web/`: primary web app (use this for running/testing)
+- `src/` at repository root: separate React Native codebase
+
+## Run locally
 
 ```bash
 cd web
@@ -50,29 +53,19 @@ npm install
 npm run dev
 ```
 
-App runs on the local Vite dev server (default `http://localhost:5173`).
+If default port is busy, Vite automatically picks the next free port.
 
-## Build
+## Quick test checklist
 
-```bash
-cd web
-npm run build
-npm run preview
-```
+1. Sign up as admin.
+2. Create one manager and one employee in Team Members.
+3. Create an approval rule for the employee.
+4. Log in as employee and submit an expense.
+5. Log in as manager and approve/reject from Pending Approvals.
+6. Verify final status in admin Global Expenses.
 
-## Scripts (web)
+## Deployment notes
 
-- `npm run dev` - start dev server
-- `npm run build` - type-check + production build
-- `npm run preview` - preview production build
-- `npm run lint` - lint project
-
-## APIs used by services
-
-- Countries/currencies: `https://restcountries.com/v3.1/all?fields=name,currencies,cca2,flag`
-- Exchange rates: `https://api.exchangerate-api.com/v4/latest/{BASE}`
-
-## Notes
-
-- Current auth/password flow is demo-oriented (not production hardened).
-- Data is local (browser IndexedDB); no backend server required for demo.
+- The current implementation runs as a self-contained web system using browser-local data storage.
+- External country and exchange services are integrated with fallback behavior for reliability.
+- The architecture is modular and can be connected to a backend API layer when required.

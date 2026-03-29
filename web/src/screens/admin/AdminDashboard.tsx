@@ -66,14 +66,14 @@ export default function AdminDashboard() {
 }
 
 const styles: Record<string, any> = {
-  container: { display: 'flex', height: '100vh', backgroundColor: 'var(--bg-primary)' },
-  sidebar: { width: '280px', backgroundColor: 'var(--bg-card)', borderRight: '1px solid var(--border-default)', padding: '24px', display: 'flex', flexDirection: 'column' },
+  container: { display: 'flex', height: '100vh', backgroundColor: 'transparent', padding: '16px', gap: '16px' },
+  sidebar: { width: '290px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: '18px', padding: '24px', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-soft)' },
   logoArea: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px' },
-  logoIcon: { width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'var(--accent-light)', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold' },
-  appName: { margin: 0, fontSize: '18px', color: 'var(--text-primary)' },
+  logoIcon: { width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(135deg, var(--accent-primary), #0ea5e9)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold', boxShadow: '0 10px 20px rgba(11, 94, 215, 0.25)' },
+  appName: { margin: 0, fontSize: '19px', color: 'var(--text-primary)', letterSpacing: '-0.01em' },
   nav: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  navItem: { backgroundColor: 'transparent', color: 'var(--text-secondary)', border: 'none', padding: '12px 16px', borderRadius: '8px', textAlign: 'left', cursor: 'pointer', fontSize: '15px', fontWeight: 500, transition: 'all 0.2s' },
-  navItemActive: { backgroundColor: 'var(--accent-light)', color: 'var(--accent-secondary)', border: 'none', padding: '12px 16px', borderRadius: '8px', textAlign: 'left', cursor: 'pointer', fontSize: '15px', fontWeight: 600 },
-  logoutBtn: { backgroundColor: 'transparent', color: 'var(--status-error)', border: '1px solid var(--status-error-bg)', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, marginTop: '20px' },
-  content: { flex: 1, overflowY: 'auto', padding: '40px' },
+  navItem: { backgroundColor: 'transparent', color: 'var(--text-secondary)', border: '1px solid transparent', padding: '12px 16px', borderRadius: '10px', textAlign: 'left', cursor: 'pointer', fontSize: '14px', fontWeight: 600, transition: 'all 0.2s' },
+  navItemActive: { backgroundColor: 'var(--accent-light)', color: 'var(--accent-secondary)', border: '1px solid rgba(37, 99, 235, 0.24)', padding: '12px 16px', borderRadius: '10px', textAlign: 'left', cursor: 'pointer', fontSize: '14px', fontWeight: 700 },
+  logoutBtn: { backgroundColor: '#fff', color: 'var(--status-error)', border: '1px solid rgba(220, 38, 38, 0.2)', padding: '12px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700, marginTop: '20px' },
+  content: { flex: 1, overflowY: 'auto', padding: '34px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: '18px', boxShadow: 'var(--shadow-soft)' },
 };

@@ -1,49 +1,100 @@
-:root {
-  /* Colors */
-  --bg-primary: #0A0A0F;
-  --bg-secondary: #13131A;
-  --bg-card: #1C1C24;
-  --bg-elevated: #262630;
-  --bg-overlay: rgba(10, 10, 15, 0.85);
-  
-  --text-primary: #F0F0FF;
-  --text-secondary: #B0B0C0;
-  --text-muted: #6E6E80;
-  --text-accent: #8B85FF;
-  
-  --accent-primary: #6C63FF;
-  --accent-secondary: #8B85FF;
-  --accent-light: rgba(108, 99, 255, 0.15);
-  
-  --border-default: #2A2A35;
-  --border-subtle: #1C1C24;
-  
-  --status-success: #10B981;
-  --status-success-bg: rgba(16, 185, 129, 0.15);
-  --status-error: #EF4444;
-  --status-error-bg: rgba(239, 68, 68, 0.15);
-  --status-warning: #F59E0B;
-  --status-warning-bg: rgba(245, 158, 11, 0.15);
-  --status-info: #3B82F6;
-  --status-info-bg: rgba(59, 130, 246, 0.15);
-  
-  --role-admin: #EC4899;
-  --role-admin-bg: rgba(236, 72, 153, 0.15);
-  --role-manager: #8B5CF6;
-  --role-manager-bg: rgba(139, 92, 246, 0.15);
-  --role-employee: #3B82F6;
-  --role-employee-bg: rgba(59, 130, 246, 0.15);
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-  /* Typography */
-  --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+:root {
+  /* Brand palette */
+  --bg-primary: #f3f6fb;
+  --bg-secondary: #e9eef7;
+  --bg-card: #ffffff;
+  --bg-elevated: #f8fbff;
+  --bg-overlay: rgba(15, 23, 42, 0.56);
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-accent: #0b5ed7;
+
+  --accent-primary: #0b5ed7;
+  --accent-secondary: #2563eb;
+  --accent-light: rgba(37, 99, 235, 0.12);
+
+  --border-default: #d7e0ef;
+  --border-subtle: #e8eef8;
+  --shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.06);
+  --shadow-strong: 0 20px 50px rgba(15, 23, 42, 0.12);
+
+  --status-success: #059669;
+  --status-success-bg: rgba(5, 150, 105, 0.12);
+  --status-error: #dc2626;
+  --status-error-bg: rgba(220, 38, 38, 0.12);
+  --status-warning: #d97706;
+  --status-warning-bg: rgba(217, 119, 6, 0.14);
+  --status-info: #2563eb;
+  --status-info-bg: rgba(37, 99, 235, 0.12);
+
+  --role-admin: #c026d3;
+  --role-admin-bg: rgba(192, 38, 211, 0.12);
+  --role-manager: #0f766e;
+  --role-manager-bg: rgba(15, 118, 110, 0.12);
+  --role-employee: #1d4ed8;
+  --role-employee-bg: rgba(29, 78, 216, 0.12);
+
+  --font-primary: 'Plus Jakarta Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+  --body-bg:
+    radial-gradient(circle at 8% 4%, rgba(11, 94, 215, 0.1) 0, transparent 35%),
+    radial-gradient(circle at 92% 0%, rgba(14, 165, 233, 0.1) 0, transparent 30%),
+    linear-gradient(180deg, #f8fbff 0%, #f2f6fc 100%);
+}
+
+:root[data-theme='dark'] {
+  --bg-primary: #030712;
+  --bg-secondary: #060f1f;
+  --bg-card: #0a1426;
+  --bg-elevated: #101c33;
+  --bg-overlay: rgba(1, 4, 12, 0.82);
+
+  --text-primary: #eef4ff;
+  --text-secondary: #cfdbf3;
+  --text-muted: #93a8cd;
+  --text-accent: #7cb2ff;
+
+  --accent-primary: #4f9bff;
+  --accent-secondary: #72b0ff;
+  --accent-light: rgba(79, 155, 255, 0.18);
+
+  --border-default: #1c2d4d;
+  --border-subtle: #13213b;
+  --shadow-soft: 0 14px 34px rgba(1, 5, 16, 0.65);
+  --shadow-strong: 0 28px 58px rgba(1, 5, 16, 0.72);
+
+  --status-success: #34d399;
+  --status-success-bg: rgba(52, 211, 153, 0.16);
+  --status-error: #f87171;
+  --status-error-bg: rgba(248, 113, 113, 0.16);
+  --status-warning: #fbbf24;
+  --status-warning-bg: rgba(251, 191, 36, 0.16);
+  --status-info: #60a5fa;
+  --status-info-bg: rgba(96, 165, 250, 0.16);
+
+  --role-admin: #f472b6;
+  --role-admin-bg: rgba(244, 114, 182, 0.16);
+  --role-manager: #2dd4bf;
+  --role-manager-bg: rgba(45, 212, 191, 0.16);
+  --role-employee: #93c5fd;
+  --role-employee-bg: rgba(147, 197, 253, 0.16);
+
+  --body-bg:
+    radial-gradient(circle at 10% 6%, rgba(37, 99, 235, 0.14) 0, transparent 32%),
+    radial-gradient(circle at 90% 0%, rgba(14, 165, 233, 0.1) 0, transparent 24%),
+    linear-gradient(180deg, #020611 0%, #030712 100%);
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--bg-primary);
+  background: var(--body-bg);
   color: var(--text-primary);
-  font-family: var(--font-inter);
+  font-family: var(--font-primary);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -58,5 +109,34 @@ a {
 
 button {
   cursor: pointer;
-  font-family: var(--font-inter);
+  font-family: var(--font-primary);
+}
+
+input,
+select,
+textarea {
+  font-family: var(--font-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent-secondary) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+@keyframes fade-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#root {
+  animation: fade-slide-up 0.4s ease;
 }

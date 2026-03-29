@@ -2,18 +2,38 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { ExpenseRepo } from '../../repositories/ExpenseRepo';
 import { ApprovalService } from '../../services/ApprovalService';
+import { CompanyRepo } from '../../repositories/CompanyRepo';
+import { CurrencyService } from '../../services/CurrencyService';
 
 export default function AdminExpenses() {
   const { session } = useAuth();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [baseCurrency, setBaseCurrency] = useState('USD');
 
   const refresh = async () => {
     if (!session) return;
     setLoading(true);
     try {
-      const data = await ExpenseRepo.findByCompany(session.company_id);
-      setExpenses(data);
+      const [company, data] = await Promise.all([
+        CompanyRepo.findById(session.company_id),
+        ExpenseRepo.findByCompany(session.company_id),
+      ]);
+      const companyBase = company?.base_currency || 'USD';
+      const rates = await CurrencyService.getRates(companyBase);
+      const mapped = data.map((expense) => {
+        const sourceAmount = Number(expense.amount || 0);
+        const sourceCurrency = expense.currency || companyBase;
+        const convertedAmount = CurrencyService.convert(sourceAmount, sourceCurrency, companyBase, rates);
+        return {
+          ...expense,
+          sourceLabel: CurrencyService.format(sourceAmount, sourceCurrency),
+          convertedLabel: CurrencyService.format(convertedAmount, companyBase),
+        };
+      });
+
+      setBaseCurrency(companyBase);
+      setExpenses(mapped);
     } finally {
       setLoading(false);
     }
@@ -76,7 +96,13 @@ export default function AdminExpenses() {
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{exp.category_name}</div>
                     </td>
                     <td>{exp.expense_date}</td>
-                    <td style={{ fontWeight: 600 }}>{exp.currency} {Number(exp.amount).toFixed(2)}</td>
+                    <td style={{ fontWeight: 600 }}>
+                      <div>{exp.convertedLabel || `${exp.currency} ${Number(exp.amount).toFixed(2)}`}</div>
+                      {exp.sourceLabel && exp.sourceLabel !== exp.convertedLabel ? (
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>Original: {exp.sourceLabel}</div>
+                      ) : null}
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>Base: {baseCurrency}</div>
+                    </td>
                     <td><span style={styles.statusBadge(exp.status)}>{exp.status}</span></td>
                     <td>
                       {exp.status !== 'approved' && exp.status !== 'rejected' && exp.status !== 'draft' ? (
