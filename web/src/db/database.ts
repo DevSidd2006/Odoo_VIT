@@ -21,7 +21,7 @@ export class ReimburseAppDB extends Dexie {
       companies: '++id, base_currency',
       users: '++id, email, company_id, role',
       categories: '++id, company_id',
-      expenses: '++id, employee_id, company_id, status',
+      expenses: '++id, employee_id, company_id, merchant, status',
       approval_rules: '++id, user_id, company_id',
       approval_rule_approvers: '++id, rule_id, user_id, order_index',
       approval_requests: '++id, expense_id, approver_id, status',

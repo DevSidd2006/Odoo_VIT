@@ -3,7 +3,7 @@ import type { Expense, ExpenseStatus, ExpenseWithDetails } from '../types';
 import { CATEGORIES } from '../utils/constants';
 
 const enrichExpense = async (e: Expense): Promise<ExpenseWithDetails> => {
-  const user = await db.users.get(e.employee_id);
+  const user = e.employee_id ? await db.users.get(e.employee_id) : undefined;
   const category = CATEGORIES.find(c => c.id === e.category_id);
   return {
     ...e,
@@ -17,6 +17,7 @@ export const ExpenseRepo = {
   async create(data: {
     company_id: number;
     employee_id: number;
+    merchant?: string;
     description: string;
     expense_date: string;
     category_id: number;
@@ -28,6 +29,7 @@ export const ExpenseRepo = {
     return await db.expenses.add({
       company_id: data.company_id,
       employee_id: data.employee_id,
+      merchant: data.merchant || '',
       description: data.description,
       expense_date: data.expense_date,
       category_id: data.category_id,
@@ -49,13 +51,13 @@ export const ExpenseRepo = {
 
   async findByEmployee(employee_id: number): Promise<ExpenseWithDetails[]> {
     const expenses = await db.expenses.where('employee_id').equals(employee_id).toArray();
-    expenses.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    expenses.sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
     return Promise.all(expenses.map(enrichExpense));
   },
 
   async findByCompany(company_id: number): Promise<ExpenseWithDetails[]> {
     const expenses = await db.expenses.where('company_id').equals(company_id).toArray();
-    expenses.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    expenses.sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
     return Promise.all(expenses.map(enrichExpense));
   },
 

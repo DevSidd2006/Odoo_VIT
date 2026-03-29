@@ -8,6 +8,12 @@ A multi-role expense reimbursement mobile app built in React Native (Expo). Comp
 
 Zero-friction expense reporting with structured approval workflows — no cloud dependency, works fully offline.
 
+USP focus for this milestone:
+
+- Explainable approval decisions (not just status labels)
+- Policy simulation before publish
+- Safe admin override with audit proof trail
+
 ## Context
 
 - **Platform:** React Native (Expo managed → bare workflow for Tesseract OCR)

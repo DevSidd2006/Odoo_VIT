@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { UserRepo } from '../../repositories/UserRepo';
+import { UserRepo, generatePassword } from '../../repositories/UserRepo';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -10,6 +10,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +38,22 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotPassword = async () => {
+    const targetEmail = window.prompt('Enter your registered email to generate a temporary password:', email.trim());
+    if (!targetEmail) return;
+
+    const normalized = targetEmail.trim().toLowerCase();
+    const user = await UserRepo.findByEmail(normalized);
+    if (!user || !user.id) {
+      setError('No account found for that email.');
+      return;
+    }
+
+    const tempPassword = generatePassword();
+    await UserRepo.updatePassword(user.id, tempPassword);
+    setResetResult({ email: normalized, password: tempPassword });
   };
 
   return (
@@ -84,6 +101,10 @@ export default function LoginScreen() {
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
+
+          <button type="button" style={styles.forgotBtn} onClick={handleForgotPassword}>
+            Forgot password?
+          </button>
         </form>
 
         <div style={styles.divider} />
@@ -95,6 +116,22 @@ export default function LoginScreen() {
           </button>
         </div>
       </div>
+
+      {resetResult ? (
+        <div style={styles.resetOverlay}>
+          <div style={styles.resetCard}>
+            <h3 style={{ marginTop: 0 }}>Temporary Password Generated</h3>
+            <p style={{ margin: '6px 0 8px 0', color: 'var(--text-secondary)' }}>
+              Account: {resetResult.email}
+            </p>
+            <div style={styles.resetPw}>{resetResult.password}</div>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              Use this password to log in, then change it from profile later.
+            </p>
+            <button style={styles.submitBtn} onClick={() => setResetResult(null)}>Done</button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -188,6 +225,15 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: '8px',
     boxShadow: '0 4px 12px rgba(108, 99, 255, 0.4)',
   },
+  forgotBtn: {
+    marginTop: '10px',
+    background: 'none',
+    border: 'none',
+    color: 'var(--accent-secondary)',
+    fontSize: '13px',
+    padding: 0,
+    textAlign: 'left',
+  },
   divider: {
     height: '1px',
     backgroundColor: 'var(--border-subtle)',
@@ -207,5 +253,32 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 0,
     fontSize: '14px',
     fontWeight: 500,
+  },
+  resetOverlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'var(--bg-overlay)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  resetCard: {
+    width: '100%',
+    maxWidth: 420,
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-default)',
+    borderRadius: 12,
+    padding: 20,
+  },
+  resetPw: {
+    border: '1px solid var(--accent-primary)',
+    background: 'var(--accent-light)',
+    borderRadius: 8,
+    padding: '12px 14px',
+    fontWeight: 700,
+    letterSpacing: 1,
+    marginBottom: 10,
+    color: 'var(--accent-secondary)',
   },
 };

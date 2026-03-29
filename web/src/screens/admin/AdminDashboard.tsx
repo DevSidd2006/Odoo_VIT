@@ -1,8 +1,9 @@
-import React from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import UserManagement from './UserManagement';
 import ApprovalRules from './ApprovalRules';
+
+import AdminExpenses from './AdminExpenses';
 
 export default function AdminDashboard() {
   const { signOut } = useAuth();
@@ -14,7 +15,7 @@ export default function AdminDashboard() {
     navigate('/');
   };
 
-  const currentTab = location.pathname.includes('/rules') ? 'rules' : 'users';
+  const currentTab = location.pathname.includes('/rules') ? 'rules' : location.pathname.includes('/expenses') ? 'expenses' : 'users';
 
   return (
     <div style={styles.container}>
@@ -37,6 +38,12 @@ export default function AdminDashboard() {
           >
             🛡️ Policy & Rules
           </button>
+          <button
+            style={currentTab === 'expenses' ? styles.navItemActive : styles.navItem}
+            onClick={() => navigate('/expenses')}
+          >
+            📊 Global Expenses
+          </button>
         </nav>
 
         <div style={{ flex: 1 }} />
@@ -50,6 +57,7 @@ export default function AdminDashboard() {
         <Routes>
           <Route path="/users" element={<UserManagement />} />
           <Route path="/rules" element={<ApprovalRules />} />
+          <Route path="/expenses" element={<AdminExpenses />} />
           <Route path="*" element={<UserManagement />} />
         </Routes>
       </div>

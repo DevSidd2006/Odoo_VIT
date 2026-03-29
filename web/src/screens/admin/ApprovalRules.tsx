@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { ApprovalRuleRepo } from '../../repositories/ApprovalRepo';
 import { UserRepo } from '../../repositories/UserRepo';
+import type { ApprovalRuleWithApprovers } from '../../types';
+import PolicySimulator from '../../components/PolicySimulator';
 
 export default function ApprovalRules() {
   const { session } = useAuth();
@@ -10,15 +12,20 @@ export default function ApprovalRules() {
   const [loading, setLoading] = useState(true);
   
   const [showForm, setShowForm] = useState(false);
+  const [simulateRule, setSimulateRule] = useState<ApprovalRuleWithApprovers | null>(null);
   const [form, setForm] = useState({
     user_id: 0,
     description: '',
     manager_is_approver: true,
+    override_manager_id: null as number | null,
     specific_approver_id: null as number | null,
     sequential: true,
     min_approval_percentage: 100,
     approvers: [] as { user_id: number; required: boolean; order_index: number }[]
   });
+
+  const employeeUsers = users.filter(u => u.role === 'employee');
+  const approverCandidates = users.filter(u => u.role !== 'employee');
 
   const refresh = async () => {
     if (!session) return;
@@ -47,26 +54,48 @@ export default function ApprovalRules() {
     if (!form.user_id || !form.description) return;
 
     // We do not have manager_id in form directly, we fetch from the user selected
-    const selectedUser = users.find(u => u.id === form.user_id);
+    const selectedUser = employeeUsers.find(u => u.id === form.user_id);
+    if (!selectedUser) {
+      alert('Please select a valid employee.');
+      return;
+    }
+
+    const dedupedApprovers = Array.from(
+      new Map(form.approvers.map(a => [a.user_id, a])).values()
+    ).map((a, index) => ({ ...a, order_index: index }));
+
     const managerId = selectedUser?.manager_id || 0;
 
-    if (form.manager_is_approver && !managerId) {
-      alert('Selected employee has no manager assigned. Either set manager relationship first or uncheck manager approver.');
+    if (form.manager_is_approver && !form.override_manager_id && !managerId) {
+      alert('Selected employee has no manager assigned. Either select an override manager or uncheck manager approver.');
       return;
     }
     
+    const effectiveManagerId = form.override_manager_id || managerId;
+    const effectiveSpecificApproverId = form.specific_approver_id;
+
+    const specificApproverInPath =
+      !effectiveSpecificApproverId
+      || (form.manager_is_approver && effectiveSpecificApproverId === effectiveManagerId)
+      || dedupedApprovers.some(a => a.user_id === effectiveSpecificApproverId);
+
+    if (!specificApproverInPath) {
+      alert('Specific approver must be part of the approval path (manager or additional approver).');
+      return;
+    }
+
     const ruleId = await ApprovalRuleRepo.create({
       company_id: session!.company_id,
       user_id: form.user_id,
       description: form.description,
-      manager_id: managerId,
+      manager_id: effectiveManagerId,
       manager_is_approver: form.manager_is_approver,
-      specific_approver_id: form.specific_approver_id,
+      specific_approver_id: effectiveSpecificApproverId,
       sequential: form.sequential,
       min_approval_percentage: form.min_approval_percentage,
     });
 
-    for (const a of form.approvers) {
+    for (const a of dedupedApprovers) {
       await ApprovalRuleRepo.addApprover({
         rule_id: ruleId,
         user_id: a.user_id,
@@ -75,12 +104,25 @@ export default function ApprovalRules() {
       });
     }
 
+    setForm({
+      user_id: 0,
+      description: '',
+      manager_is_approver: true,
+      override_manager_id: null,
+      specific_approver_id: null,
+      sequential: true,
+      min_approval_percentage: 100,
+      approvers: [],
+    });
     setShowForm(false);
     refresh();
   };
 
   const addApproverToForm = (userId: number) => {
     if (!userId) return;
+    if (form.approvers.some(a => a.user_id === userId)) {
+      return;
+    }
     setForm(prev => ({
       ...prev,
       approvers: [...prev.approvers, { user_id: userId, required: false, order_index: prev.approvers.length }]
@@ -90,7 +132,9 @@ export default function ApprovalRules() {
   const removeApproverFromForm = (index: number) => {
     setForm(prev => ({
       ...prev,
-      approvers: prev.approvers.filter((_, i) => i !== index)
+      approvers: prev.approvers
+        .filter((_, i) => i !== index)
+        .map((a, i) => ({ ...a, order_index: i }))
     }));
   };
 
@@ -135,12 +179,16 @@ export default function ApprovalRules() {
                 )}
               </div>
               
-              <div style={styles.simulatorBtn} onClick={() => alert('Simulator UI coming soon')}>
+              <div style={styles.simulatorBtn} onClick={() => setSimulateRule(r)}>
                 🔮 Run Policy Simulator
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {simulateRule && (
+        <PolicySimulator rule={simulateRule} onClose={() => setSimulateRule(null)} />
       )}
 
       {showForm && (
@@ -161,7 +209,7 @@ export default function ApprovalRules() {
                 <label style={styles.label}>Applies To (Employee)</label>
                 <select style={styles.input} required value={form.user_id || ''} onChange={e => setForm({...form, user_id: Number(e.target.value)})}>
                   <option value="">Select an employee...</option>
-                  {users.map(u => (
+                  {employeeUsers.map(u => (
                     <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
                   ))}
                 </select>
@@ -178,6 +226,18 @@ export default function ApprovalRules() {
                 </label>
               </div>
 
+              {form.manager_is_approver && (
+                <div style={styles.field}>
+                  <label style={styles.label}>Manager Override (Default runs from user profile)</label>
+                  <select style={styles.input} value={form.override_manager_id || ''} onChange={e => setForm({...form, override_manager_id: e.target.value ? Number(e.target.value) : null})}>
+                    <option value="">Use Default Direct Manager</option>
+                    {approverCandidates.map(u => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div style={styles.field}>
                 <label style={styles.label}>Specific Approver Auto-Approve (Optional)</label>
                 <select
@@ -189,7 +249,7 @@ export default function ApprovalRules() {
                   })}
                 >
                   <option value="">None</option>
-                  {users.filter(u => u.role !== 'employee').map(u => (
+                  {approverCandidates.map(u => (
                     <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
                 </select>
@@ -224,7 +284,7 @@ export default function ApprovalRules() {
                   onChange={e => addApproverToForm(Number(e.target.value))}
                 >
                   <option value="">+ Add an approver...</option>
-                  {users.filter(u => u.role !== 'employee' && u.id !== form.user_id).map(u => (
+                  {approverCandidates.filter(u => u.id !== form.user_id).map(u => (
                     <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
                 </select>

@@ -1,5 +1,5 @@
 import { db } from '../db/database';
-import type { ApprovalRule, ApprovalRuleApprover, ApprovalRuleWithApprovers, ApprovalRequest, ApprovalRequestStatus, ApprovalRequestWithDetails } from '../types';
+import type { ApprovalRule, ApprovalRuleWithApprovers, ApprovalRequest, ApprovalRequestStatus, ApprovalRequestWithDetails } from '../types';
 import { CATEGORIES } from '../utils/constants';
 
 export const ApprovalRuleRepo = {
@@ -121,7 +121,7 @@ export const ApprovalRequestRepo = {
     const pending = requests.filter(r => r.status === 'pending');
     pending.sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
 
-    return await Promise.all(pending.map(async (ar) => {
+    const hydrated = await Promise.all(pending.map(async (ar) => {
       const approver = await db.users.get(ar.approver_id);
       const expense = await db.expenses.get(ar.expense_id);
       const employee = expense?.employee_id ? await db.users.get(expense.employee_id) : null;
@@ -130,8 +130,10 @@ export const ApprovalRequestRepo = {
 
       return {
         ...ar,
+        expense_status: expense?.status || 'draft',
         approver_name: approver?.name || 'Unknown',
         expense_description: expense?.description || '',
+        expense_merchant: expense?.merchant || '',
         expense_amount: expense?.amount || 0,
         expense_currency: expense?.currency || '',
         employee_name: employee?.name || 'Unknown',
@@ -139,6 +141,10 @@ export const ApprovalRequestRepo = {
         company_base_currency: company?.base_currency || 'USD'
       };
     }));
+
+    return hydrated.filter(
+      row => row.status === 'pending' && (row as any).expense_status !== 'approved' && (row as any).expense_status !== 'rejected'
+    );
   },
 
   async findByExpense(expense_id: number): Promise<(ApprovalRequest & { approver_name: string })[]> {
@@ -149,6 +155,20 @@ export const ApprovalRequestRepo = {
       const approver = await db.users.get(ar.approver_id);
       return { ...ar, approver_name: approver?.name || 'Unknown' };
     }));
+  },
+
+  async skipPendingByExpense(expense_id: number): Promise<void> {
+    const requests = await db.approval_requests.where('expense_id').equals(expense_id).toArray();
+    const pending = requests.filter(r => r.status === 'pending');
+    await Promise.all(
+      pending.map(request =>
+        db.approval_requests.update(request.id!, {
+          status: 'skipped',
+          acted_at: new Date().toISOString(),
+          decision_comment: 'Skipped due to expense finalization override',
+        })
+      )
+    );
   },
 
   async updateStatus(id: number, status: ApprovalRequestStatus): Promise<void> {

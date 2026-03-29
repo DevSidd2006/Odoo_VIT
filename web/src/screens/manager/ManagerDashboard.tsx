@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ApprovalRequestRepo } from '../../repositories/ApprovalRepo';
 import { ApprovalService } from '../../services/ApprovalService';
 import { CurrencyService } from '../../services/CurrencyService';
+import type { ApprovalExplanation } from '../../types';
 
 export default function ManagerDashboard() {
   const { signOut, session } = useAuth();
@@ -85,7 +86,7 @@ function PendingApprovals() {
       const pending = await ApprovalRequestRepo.findPendingByApprover(session.user_id);
       const ratesByBase = new Map<string, Awaited<ReturnType<typeof CurrencyService.getRates>>>();
 
-      const mapped = [];
+      const mapped: (any & { explanation: ApprovalExplanation | null })[] = [];
       for (const req of pending) {
         const baseCurrency = req.company_base_currency || req.expense_currency || 'USD';
         const sourceCurrency = req.expense_currency || baseCurrency;
@@ -104,10 +105,13 @@ function PendingApprovals() {
           );
         }
 
+        const explanation = await ApprovalService.getDecisionExplanation(req.expense_id, req.rule_id);
+
         mapped.push({
           ...req,
           sourceLabel: CurrencyService.format(sourceAmount, sourceCurrency),
           convertedLabel: CurrencyService.format(convertedAmount, baseCurrency),
+          explanation,
         });
       }
 
@@ -131,14 +135,13 @@ function PendingApprovals() {
       alert('Rejection requires a comment.');
       return;
     }
-    
     setActing(requestId);
     try {
-      await ApprovalService.processDecision(requestId, decision, expenseId, ruleId, comment);
+      await ApprovalService.processDecision(requestId, decision, expenseId, ruleId, session!.user_id, comment);
       await refresh();
     } catch (e) {
       console.error(e);
-      alert('Error processing approval');
+      alert('Error processing approval (Unauthorized or Internal Error)');
     } finally {
       setActing(null);
     }
@@ -155,7 +158,7 @@ function PendingApprovals() {
             <div key={r.id} style={styles.card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>{r.expense_description}</h3>
+                  <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>{r.expense_merchant ? `${r.expense_merchant} - ` : ''}{r.expense_description}</h3>
                   <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
                     <strong>Employee:</strong> {r.employee_name}
                   </div>
@@ -163,6 +166,19 @@ function PendingApprovals() {
                     <strong>Amount:</strong> {r.convertedLabel}
                     {r.sourceLabel !== r.convertedLabel ? ` (original: ${r.sourceLabel})` : ''}
                   </div>
+                  {r.explanation ? (
+                    <div style={styles.explainBox}>
+                      <div style={styles.explainTop}>
+                        <span style={styles.modeBadge(r.explanation.mode)}>Mode: {r.explanation.mode}</span>
+                        <span style={styles.progressText}>
+                          {r.explanation.approvedCount}/{r.explanation.totalApprovers} approvals
+                          {' • '}
+                          {r.explanation.approvalPercent.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div style={styles.explainReason}>{r.explanation.reason}</div>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div style={styles.actionRow}>
@@ -190,7 +206,7 @@ function PendingApprovals() {
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, any> = {
   container: { display: 'flex', height: '100vh', backgroundColor: 'var(--bg-primary)' },
   sidebar: { width: '280px', backgroundColor: 'var(--bg-card)', borderRight: '1px solid var(--border-default)', padding: '24px', display: 'flex', flexDirection: 'column' },
   logoArea: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px' },
@@ -204,6 +220,19 @@ const styles: Record<string, React.CSSProperties> = {
   card: { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: '12px', padding: '20px' },
   emptyState: { textAlign: 'center', color: 'var(--text-muted)', padding: '40px', border: '1px dashed var(--border-default)', borderRadius: '12px' },
   actionRow: { display: 'flex', gap: '8px' },
+  explainBox: { marginTop: 10, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '8px 10px' },
+  explainTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 },
+  progressText: { fontSize: 12, color: 'var(--text-muted)' },
+  explainReason: { fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 },
+  modeBadge: (mode: string) => ({
+    fontSize: 11,
+    textTransform: 'uppercase',
+    borderRadius: 999,
+    padding: '2px 8px',
+    fontWeight: 700,
+    background: mode === 'hybrid' ? 'var(--accent-light)' : mode === 'specific' ? 'var(--status-success-bg)' : 'var(--status-warning-bg)',
+    color: mode === 'hybrid' ? 'var(--accent-secondary)' : mode === 'specific' ? 'var(--status-success)' : 'var(--status-warning)',
+  }),
   approveBtn: { backgroundColor: 'var(--status-success)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' },
   rejectBtn: { backgroundColor: 'transparent', color: 'var(--status-error)', border: '1px solid var(--status-error)', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' },
 };

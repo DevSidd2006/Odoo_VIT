@@ -22,6 +22,9 @@
 - REQ-011: "Approvers Sequence" toggle — if checked, approvals go sequentially (John → Mitchell → Andreas); if unchecked, all approvers notified simultaneously
 - REQ-012: Minimum Approval Percentage field — minimum % of approvers required for auto-approval
 - REQ-013: If required approver rejects → expense auto-rejected; if sequence unchecked → send to all simultaneously
+- REQ-037: Specific approver rule — if selected specific approver approves, expense auto-approves
+- REQ-038: Hybrid rule support — percentage rule OR specific approver rule can finalize approval
+- REQ-039: Rule validation must ensure specific approver belongs to active approval path
 
 #### Employee — Expense Flow
 - REQ-014: Expense list with summary row: "X rs To submit", "Y rs Waiting approval", "Z rs Approved"
@@ -39,6 +42,7 @@
 - REQ-024: "Approvals to Review" table: Approval Subject, Request Owner, Category, Request Status, Total Amount (in company currency), Approve button, Reject button
 - REQ-025: Total amount shown in both original currency and converted to company base currency (e.g., "567 $ (in ZAR) = 49896")
 - REQ-026: After approve/reject action, record becomes read-only, action buttons disappear, status updates
+- REQ-040: Manager decision must show explainable reason text (why approved/rejected/pending)
 
 #### Currency
 - REQ-027: At expense creation, employee selects currency and enters amount
@@ -50,6 +54,8 @@
 - REQ-031: Delete expense (while in Draft state)
 - REQ-032: Filter expense list by status
 - REQ-033: Category management (predefined: Food, Transport, Accommodation, Office Supplies, Miscellaneous)
+- REQ-041: Policy health indicator (Green/Amber/Red) before saving approval rule
+- REQ-042: Admin override must auto-close pending approval requests and record override reason
 
 ### Nice-to-Have (P2)
 - REQ-034: Search expenses by description

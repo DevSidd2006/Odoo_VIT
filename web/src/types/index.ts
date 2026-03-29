@@ -10,6 +10,8 @@ export type ExpenseStatus =
 
 export type ApprovalRequestStatus = 'pending' | 'approved' | 'rejected' | 'skipped';
 
+export type ApprovalMode = 'percentage' | 'specific' | 'hybrid';
+
 export interface Company {
   id: number;
   name: string;
@@ -43,6 +45,7 @@ export interface Expense {
   employeeId?: number | string;
   employeeName?: string;
   employee_name?: string;
+  merchant?: string;
   description: string;
   expense_date?: string;
   date?: string;
@@ -116,11 +119,28 @@ export interface ApprovalRequest {
 export interface ApprovalRequestWithDetails extends ApprovalRequest {
   approver_name?: string;
   expense_description?: string;
+  expense_merchant?: string;
   expense_amount?: number;
   expense_currency?: string;
+  expense_status?: ExpenseStatus;
   employee_name?: string;
   category_name?: string;
   company_base_currency?: string;
+}
+
+export interface ApprovalExplanation {
+  mode: ApprovalMode;
+  approvedCount: number;
+  rejectedCount: number;
+  pendingCount: number;
+  totalApprovers: number;
+  approvalPercent: number;
+  thresholdPercent: number;
+  specificApproverName?: string;
+  specificApproverApproved: boolean;
+  requiredRejected: boolean;
+  decision: 'pending' | 'approved' | 'rejected';
+  reason: string;
 }
 
 export interface AuthSession {

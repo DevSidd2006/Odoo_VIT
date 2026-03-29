@@ -147,3 +147,53 @@ That framing is meaningfully different and hard to commoditize quickly.
 - NIST AI RMF (trustworthy/managed AI risk framing)
 - OWASP Mobile Top 10 2024 (mobile risk baseline)
 - ISO/IEC 27001 overview (ISMS and security trust posture)
+
+## 11) Hackathon Differentiation Layer (Add This Now)
+
+To stand out in a crowded demo day, ship these three visible differentiators on top of baseline expense features:
+
+### A) Decision Receipt (per approval action)
+
+After each manager/admin decision, generate a human-readable receipt:
+
+- `Decision`: Approved / Rejected
+- `Why`: rule condition that triggered outcome
+- `Math`: approvals %, threshold %, unresolved count
+- `Trace`: who acted, when, with comment
+
+This should be shown inline in manager and employee views.
+
+### B) Policy Confidence Meter
+
+For each policy, compute and display a risk/confidence score before publishing:
+
+- Duplicate approver check
+- Missing manager path check
+- Specific approver path validation
+- Sequential dead-end risk check
+
+Display as: `Policy Health: Green / Amber / Red` with reasons.
+
+### C) Override with Safety Proof
+
+Admin override must create a visible safety proof entry:
+
+- Override actor
+- Override reason
+- Previous state -> new state
+- Auto-skipped pending approvers list
+
+This makes override behavior defensible during judging and audit discussions.
+
+## 12) 90-Second Judge Pitch Script
+
+1. "Most tools track expenses. We explain decisions."
+2. Show one expense in waiting state with rule explanation.
+3. Trigger manager decision and show Decision Receipt.
+4. Show policy simulator + policy health signal.
+5. Trigger admin override and show safety proof trail.
+6. Close: "Receipt to reimbursement, with proof at every step."
+
+## 13) USP One-Liner for Slides
+
+**"ReimburseFlow is the explainable approval engine for expenses: every decision is traceable, testable, and audit-ready."**
