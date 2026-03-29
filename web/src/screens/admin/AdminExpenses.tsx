@@ -76,35 +76,35 @@ export default function AdminExpenses() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th>Employee</th>
-                  <th>Merchant & Details</th>
-                  <th>Date</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                  <th>Admin Override</th>
+                  <th style={styles.headCell}>Employee</th>
+                  <th style={styles.headCell}>Merchant & Details</th>
+                  <th style={styles.headCell}>Date</th>
+                  <th style={styles.headCell}>Amount</th>
+                  <th style={styles.headCell}>Status</th>
+                  <th style={styles.headCell}>Admin Override</th>
                 </tr>
               </thead>
               <tbody>
                 {expenses.map(exp => (
                   <tr key={exp.id}>
-                    <td>
+                    <td style={styles.bodyCell}>
                       <div style={{ fontWeight: 600 }}>{exp.employee_name}</div>
                     </td>
-                    <td>
+                    <td style={styles.bodyCell}>
                       <div style={{ fontWeight: 600 }}>{exp.merchant || 'N/A Merchant'}</div>
                       <div style={{ fontSize: 13 }}>{exp.description}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{exp.category_name}</div>
                     </td>
-                    <td>{exp.expense_date}</td>
-                    <td style={{ fontWeight: 600 }}>
+                    <td style={styles.bodyCell}>{exp.expense_date}</td>
+                    <td style={{ ...styles.bodyCell, fontWeight: 600 }}>
                       <div>{exp.convertedLabel || `${exp.currency} ${Number(exp.amount).toFixed(2)}`}</div>
                       {exp.sourceLabel && exp.sourceLabel !== exp.convertedLabel ? (
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>Original: {exp.sourceLabel}</div>
                       ) : null}
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>Base: {baseCurrency}</div>
                     </td>
-                    <td><span style={styles.statusBadge(exp.status)}>{exp.status}</span></td>
-                    <td>
+                    <td style={styles.bodyCell}><span style={styles.statusBadge(exp.status)}>{exp.status}</span></td>
+                    <td style={styles.bodyCell}>
                       {exp.status !== 'approved' && exp.status !== 'rejected' && exp.status !== 'draft' ? (
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button 
@@ -140,6 +140,8 @@ const styles: Record<string, any> = {
   listCard: { background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 12, padding: 24 },
   tableWrap: { overflowX: 'auto' },
   table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
+  headCell: { padding: '12px 10px', fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border-default)' },
+  bodyCell: { padding: '14px 10px', borderBottom: '1px solid var(--border-subtle)', verticalAlign: 'top' },
   overrideApproveBtn: { background: 'var(--status-success-bg)', color: 'var(--status-success)', border: '1px solid var(--status-success)', borderRadius: 6, padding: '6px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
   overrideRejectBtn: { background: 'var(--status-error-bg)', color: 'var(--status-error)', border: '1px outset var(--status-error)', borderRadius: 6, padding: '6px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
   statusBadge: (status: string) => ({

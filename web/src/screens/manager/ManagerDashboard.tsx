@@ -149,7 +149,12 @@ function PendingApprovals() {
 
   return (
     <div>
-      <h2 style={{ marginBottom: '24px' }}>Pending Approvals</h2>
+      <div style={{ marginBottom: '18px' }}>
+        <h2 style={{ margin: 0 }}>Pending Approvals</h2>
+        <p style={{ margin: '6px 0 0 0', color: 'var(--text-muted)', fontSize: 13 }}>
+          Review policy context, converted amount, and decision rationale before action.
+        </p>
+      </div>
       {loading ? <p>Loading...</p> : requests.length === 0 ? (
         <div style={styles.emptyState}>No pending requests right now. 🎉</div>
       ) : (
@@ -219,7 +224,7 @@ const styles: Record<string, any> = {
   content: { flex: 1, overflowY: 'auto', padding: '34px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: '18px', boxShadow: 'var(--shadow-soft)' },
   card: { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: '14px', padding: '20px', boxShadow: 'var(--shadow-soft)' },
   emptyState: { textAlign: 'center', color: 'var(--text-muted)', padding: '40px', border: '1px dashed var(--border-default)', borderRadius: '12px' },
-  actionRow: { display: 'flex', gap: '8px' },
+  actionRow: { display: 'flex', gap: '8px', alignItems: 'center' },
   explainBox: { marginTop: 10, border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '8px 10px' },
   explainTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 },
   progressText: { fontSize: 12, color: 'var(--text-muted)' },
@@ -233,6 +238,6 @@ const styles: Record<string, any> = {
     background: mode === 'hybrid' ? 'var(--accent-light)' : mode === 'specific' ? 'var(--status-success-bg)' : 'var(--status-warning-bg)',
     color: mode === 'hybrid' ? 'var(--accent-secondary)' : mode === 'specific' ? 'var(--status-success)' : 'var(--status-warning)',
   }),
-  approveBtn: { backgroundColor: 'var(--status-success)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' },
-  rejectBtn: { backgroundColor: 'transparent', color: 'var(--status-error)', border: '1px solid var(--status-error)', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' },
+  approveBtn: { background: 'linear-gradient(135deg, var(--status-success), #10b981)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' },
+  rejectBtn: { backgroundColor: 'transparent', color: 'var(--status-error)', border: '1px solid var(--status-error)', padding: '9px 16px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' },
 };

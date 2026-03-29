@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UserRepo, generatePassword } from '../../repositories/UserRepo';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
@@ -33,6 +33,13 @@ export default function UserManagement() {
   };
 
   useEffect(() => { refresh(); }, [session]);
+
+  const stats = useMemo(() => {
+    const total = users.length;
+    const managersCount = users.filter(u => u.role === 'manager').length;
+    const employeesCount = users.filter(u => u.role === 'employee').length;
+    return { total, managersCount, employeesCount };
+  }, [users]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,8 +84,17 @@ export default function UserManagement() {
   return (
     <div>
       <div style={styles.header}>
-        <h2>Team Members</h2>
+        <div>
+          <h2 style={{ margin: 0 }}>Team Members</h2>
+          <p style={styles.subtitle}>Manage organization roles, reporting lines, and secure access.</p>
+        </div>
         <button style={styles.addBtn} onClick={() => setShowModal(true)}>+ New User</button>
+      </div>
+
+      <div style={styles.statsGrid}>
+        <div style={styles.statCard}><span>Total Users</span><strong>{stats.total}</strong></div>
+        <div style={styles.statCard}><span>Managers</span><strong>{stats.managersCount}</strong></div>
+        <div style={styles.statCard}><span>Employees</span><strong>{stats.employeesCount}</strong></div>
       </div>
 
       {loading ? (
@@ -168,28 +184,31 @@ export default function UserManagement() {
 }
 
 const styles: Record<string, any> = {
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-  addBtn: { backgroundColor: 'var(--accent-primary)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' },
+  subtitle: { margin: '6px 0 0 0', color: 'var(--text-muted)', fontSize: '13px' },
+  addBtn: { background: 'linear-gradient(135deg, var(--accent-primary), #0ea5e9)', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 10px 20px rgba(11, 94, 215, 0.22)' },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginBottom: '16px' },
+  statCard: { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: '12px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-soft)' },
   emptyState: { textAlign: 'center', color: 'var(--text-muted)', marginTop: '40px', padding: '40px', border: '1px dashed var(--border-default)', borderRadius: '12px' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' },
-  card: { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' },
+  card: { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: 'var(--shadow-soft)' },
   cardTop: { display: 'flex', gap: '12px', alignItems: 'center' },
   avatar: { width: '40px', height: '40px', borderRadius: '20px', backgroundColor: 'var(--accent-light)', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', flexShrink: 0 },
   emailText: { fontSize: '13px', color: 'var(--text-secondary)' },
   managerText: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' },
-  actionBtn: { backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', alignSelf: 'flex-start', cursor: 'pointer' },
+  actionBtn: { backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, alignSelf: 'flex-start', cursor: 'pointer' },
   roleBadge: (role: string) => ({
     fontSize: '11px', padding: '2px 8px', borderRadius: '12px', textTransform: 'capitalize', fontWeight: 600,
     backgroundColor: `var(--role-${role}-bg)`, color: `var(--role-${role})`
   }),
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
-  modalContent: { backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '400px', border: '1px solid var(--border-default)' },
+  modalContent: { backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '420px', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-strong)' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
   closeBtn: { background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '20px', cursor: 'pointer' },
   field: { marginBottom: '16px', display: 'flex', flexDirection: 'column' },
   label: { fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' },
   input: { backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', padding: '10px', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' },
-  submitBtn: { backgroundColor: 'var(--accent-primary)', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', width: '100%', fontWeight: 600, marginTop: '8px', cursor: 'pointer' },
+  submitBtn: { background: 'linear-gradient(135deg, var(--accent-primary), #0ea5e9)', color: '#fff', border: 'none', padding: '12px', borderRadius: '10px', width: '100%', fontWeight: 700, marginTop: '8px', cursor: 'pointer' },
   pwBox: { border: '1px solid var(--accent-primary)', backgroundColor: 'var(--accent-light)', padding: '16px', borderRadius: '8px', fontSize: '24px', fontWeight: 'bold', color: 'var(--accent-secondary)', letterSpacing: '2px', margin: '16px 0' },
 };
 

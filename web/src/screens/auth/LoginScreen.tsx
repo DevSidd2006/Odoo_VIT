@@ -62,6 +62,7 @@ export default function LoginScreen() {
         <div style={styles.logoIcon}>💸</div>
         <h1 style={styles.appName}>ReimburseFlow</h1>
         <p style={styles.tagline}>Smart explainable approval engine</p>
+        <div style={styles.trustBadge}>Finance-grade workflow integrity</div>
       </div>
 
       <div style={styles.card}>
@@ -115,6 +116,8 @@ export default function LoginScreen() {
             Sign up
           </button>
         </div>
+
+        <div style={styles.noteBar}>Role-safe approvals • policy explainability • audit-ready decisions</div>
       </div>
 
       {resetResult ? (
@@ -153,32 +156,45 @@ const styles: Record<string, React.CSSProperties> = {
     width: '80px',
     height: '80px',
     borderRadius: '24px',
-    backgroundColor: 'var(--accent-light)',
+    background: 'linear-gradient(135deg, var(--accent-primary), #0ea5e9)',
+    color: '#fff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '36px',
     margin: '0 auto 12px auto',
-    boxShadow: '0 0 20px rgba(108, 99, 255, 0.4)',
+    boxShadow: 'var(--shadow-strong)',
   },
   appName: {
-    fontSize: '28px',
-    fontWeight: 700,
+    fontSize: '32px',
+    fontWeight: 800,
     margin: 0,
     color: 'var(--text-primary)',
+    letterSpacing: '-0.02em',
   },
   tagline: {
     fontSize: '14px',
     color: 'var(--text-secondary)',
-    margin: '4px 0 0 0',
+    margin: '6px 0 10px 0',
+  },
+  trustBadge: {
+    display: 'inline-block',
+    padding: '6px 12px',
+    borderRadius: 999,
+    backgroundColor: 'var(--accent-light)',
+    border: '1px solid var(--border-default)',
+    color: 'var(--accent-secondary)',
+    fontSize: 12,
+    fontWeight: 700,
   },
   card: {
     backgroundColor: 'var(--bg-card)',
-    borderRadius: '16px',
+    borderRadius: '18px',
     padding: '32px',
     width: '100%',
-    maxWidth: '400px',
+    maxWidth: '430px',
     border: '1px solid var(--border-default)',
+    boxShadow: 'var(--shadow-soft)',
   },
   cardTitle: {
     fontSize: '20px',
@@ -214,16 +230,16 @@ const styles: Record<string, React.CSSProperties> = {
     outline: 'none',
   },
   submitBtn: {
-    backgroundColor: 'var(--accent-primary)',
+    background: 'linear-gradient(135deg, var(--accent-primary), #0ea5e9)',
     color: '#fff',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '10px',
     padding: '14px',
     width: '100%',
     fontSize: '16px',
-    fontWeight: 600,
+    fontWeight: 700,
     marginTop: '8px',
-    boxShadow: '0 4px 12px rgba(108, 99, 255, 0.4)',
+    boxShadow: '0 10px 24px rgba(11, 94, 215, 0.28)',
   },
   forgotBtn: {
     marginTop: '10px',
@@ -231,6 +247,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: 'none',
     color: 'var(--accent-secondary)',
     fontSize: '13px',
+    fontWeight: 600,
     padding: 0,
     textAlign: 'left',
   },
@@ -252,7 +269,15 @@ const styles: Record<string, React.CSSProperties> = {
     border: 'none',
     padding: 0,
     fontSize: '14px',
-    fontWeight: 500,
+    fontWeight: 700,
+  },
+  noteBar: {
+    marginTop: 16,
+    borderTop: '1px dashed var(--border-default)',
+    paddingTop: 12,
+    color: 'var(--text-muted)',
+    fontSize: 12,
+    textAlign: 'center',
   },
   resetOverlay: {
     position: 'fixed',

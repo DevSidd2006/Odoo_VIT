@@ -83,9 +83,15 @@ export default function SignupScreen() {
 
   return (
     <div style={styles.container}>
+      <div style={styles.logoArea}>
+        <div style={styles.logoIcon}>💸</div>
+        <h1 style={styles.brandName}>ReimburseFlow</h1>
+        <p style={styles.brandTagline}>Set up your company workspace</p>
+      </div>
+
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>Admin (Company) Signup</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '-16px 0 24px 0' }}>1 admin user per company</p>
+        <p style={{ color: 'var(--status-error)', fontSize: '13px', margin: '4px 0 24px 0' }}>1 admin user per company</p>
 
         {error && <div style={styles.errorBanner}>{error}</div>}
 
@@ -183,7 +189,11 @@ export default function SignupScreen() {
 const styles: Record<string, React.CSSProperties> = {
   // reusing some styles from Login...
   container: { minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' },
-  card: { backgroundColor: 'var(--bg-card)', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '400px', border: '1px solid var(--border-default)' },
+  logoArea: { textAlign: 'center', marginBottom: '22px' },
+  logoIcon: { width: '76px', height: '76px', borderRadius: '22px', margin: '0 auto 10px auto', background: 'linear-gradient(135deg, var(--accent-primary), #0ea5e9)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34, boxShadow: 'var(--shadow-strong)' },
+  brandName: { margin: 0, fontSize: 30, fontWeight: 800, letterSpacing: '-0.02em' },
+  brandTagline: { margin: '6px 0 0 0', fontSize: 14, color: 'var(--text-secondary)' },
+  card: { backgroundColor: 'var(--bg-card)', borderRadius: '18px', padding: '32px', width: '100%', maxWidth: '430px', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-soft)' },
   cardTitle: { fontSize: '20px', fontWeight: 700, margin: '0 0 8px 0' },
   errorBanner: { backgroundColor: 'var(--status-error-bg)', color: 'var(--status-error)', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px' },
   fieldGroup: { marginBottom: '16px', display: 'flex', flexDirection: 'column' },
@@ -192,10 +202,10 @@ const styles: Record<string, React.CSSProperties> = {
   input: { backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '8px', padding: '12px', color: 'var(--text-primary)', fontSize: '16px', outline: 'none' },
   countryBtn: { backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '8px', padding: '12px', color: 'var(--text-primary)', fontSize: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left' },
   currencyBadge: { backgroundColor: 'var(--accent-light)', borderRadius: '8px', padding: '12px', marginBottom: '16px', color: 'var(--accent-secondary)', fontSize: '14px', border: '1px solid rgba(108, 99, 255, 0.3)' },
-  submitBtn: { backgroundColor: 'var(--accent-primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '14px', width: '100%', fontSize: '16px', fontWeight: 600, marginTop: '8px', marginBottom: '20px', boxShadow: '0 4px 12px rgba(108, 99, 255, 0.4)' },
+  submitBtn: { background: 'linear-gradient(135deg, var(--accent-primary), #0ea5e9)', color: '#fff', border: 'none', borderRadius: '10px', padding: '14px', width: '100%', fontSize: '16px', fontWeight: 700, marginTop: '8px', marginBottom: '20px', boxShadow: '0 10px 24px rgba(11, 94, 215, 0.28)' },
   linkRow: { textAlign: 'center' },
   linkText: { color: 'var(--text-secondary)', fontSize: '14px' },
-  linkAccent: { color: 'var(--accent-secondary)', background: 'none', border: 'none', padding: 0, fontSize: '14px', fontWeight: 500 },
+  linkAccent: { color: 'var(--accent-secondary)', background: 'none', border: 'none', padding: 0, fontSize: '14px', fontWeight: 700 },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--bg-overlay)', display: 'flex', alignItems: 'flex-end', zIndex: 100 },
   modalCard: { backgroundColor: 'var(--bg-card)', width: '100%', maxWidth: '480px', margin: '0 auto', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px', height: '80vh', display: 'flex', flexDirection: 'column' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
