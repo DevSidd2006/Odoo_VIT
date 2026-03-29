@@ -1,19 +1,22 @@
-// ─── Enums ────────────────────────────────────────────────────────────────────
-
 export type UserRole = 'admin' | 'manager' | 'employee';
 
-export type ExpenseStatus = 'draft' | 'submitted' | 'waiting_approval' | 'approved' | 'rejected';
+export type ExpenseStatus =
+  | 'draft'
+  | 'submitted'
+  | 'waiting_approval'
+  | 'approved'
+  | 'rejected'
+  | 'pending';
 
 export type ApprovalRequestStatus = 'pending' | 'approved' | 'rejected' | 'skipped';
-
-// ─── Core Domain ──────────────────────────────────────────────────────────────
 
 export interface Company {
   id: number;
   name: string;
   country: string;
   base_currency: string;
-  created_at: string;
+  currency?: string;
+  created_at?: string;
 }
 
 export interface User {
@@ -21,34 +24,50 @@ export interface User {
   company_id: number;
   name: string;
   email: string;
-  password: string;
+  password?: string;
   role: UserRole;
-  manager_id: number | null;
-  created_at: string;
+  manager_id?: number | null;
+  managerId?: number | null;
+  companyId?: number;
+  created_at?: string;
 }
 
-export interface Category {
-  id: number;
-  name: string;
-  icon: string;
+export interface UserWithManager extends User {
+  manager_name?: string | null;
 }
 
 export interface Expense {
-  id: number;
-  company_id: number;
-  employee_id: number;
+  id: number | string;
+  company_id?: number;
+  employee_id?: number;
+  employeeId?: number | string;
+  employeeName?: string;
+  employee_name?: string;
   description: string;
-  expense_date: string;
-  category_id: number;
-  paid_by: string;
+  expense_date?: string;
+  date?: string;
+  category_id?: number;
+  category?: string;
+  paid_by?: string;
   currency: string;
   amount: number;
-  remarks: string;
+  remarks?: string;
   status: ExpenseStatus;
-  receipt_uri: string | null;
-  ocr_text: string | null;
-  created_at: string;
-  updated_at: string;
+  receipt_uri?: string;
+  receiptUri?: string;
+  ocr_text?: string;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectionReason?: string;
+}
+
+export interface ExpenseWithDetails extends Expense {
+  employee_name?: string;
+  category_name?: string;
+  category_icon?: string;
 }
 
 export interface ApprovalRule {
@@ -57,10 +76,10 @@ export interface ApprovalRule {
   user_id: number;
   description: string;
   manager_id: number;
-  manager_is_approver: boolean;
-  sequential: boolean;
+  manager_is_approver: number | boolean;
+  sequential: number | boolean;
   min_approval_percentage: number;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface ApprovalRuleApprover {
@@ -68,7 +87,11 @@ export interface ApprovalRuleApprover {
   rule_id: number;
   user_id: number;
   order_index: number;
-  required: boolean;
+  required: number | boolean;
+}
+
+export interface ApprovalRuleWithApprovers extends ApprovalRule {
+  approvers: (ApprovalRuleApprover & { approver_name?: string })[];
 }
 
 export interface ApprovalRequest {
@@ -78,37 +101,19 @@ export interface ApprovalRequest {
   rule_id: number;
   order_index: number;
   status: ApprovalRequestStatus;
-  acted_at: string | null;
-  created_at: string;
-}
-
-// ─── Joined/View Types ────────────────────────────────────────────────────────
-
-export interface ExpenseWithDetails extends Expense {
-  employee_name: string;
-  category_name: string;
-  category_icon: string;
+  acted_at?: string | null;
+  created_at?: string;
 }
 
 export interface ApprovalRequestWithDetails extends ApprovalRequest {
-  approver_name: string;
-  expense_description: string;
-  expense_amount: number;
-  expense_currency: string;
-  employee_name: string;
-  category_name: string;
-  company_base_currency: string;
+  approver_name?: string;
+  expense_description?: string;
+  expense_amount?: number;
+  expense_currency?: string;
+  employee_name?: string;
+  category_name?: string;
+  company_base_currency?: string;
 }
-
-export interface UserWithManager extends User {
-  manager_name: string | null;
-}
-
-export interface ApprovalRuleWithApprovers extends ApprovalRule {
-  approvers: (ApprovalRuleApprover & { approver_name: string })[];
-}
-
-// ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export interface AuthSession {
   user_id: number;
@@ -118,15 +123,11 @@ export interface AuthSession {
   email: string;
 }
 
-// ─── Currency ─────────────────────────────────────────────────────────────────
-
 export interface ExchangeRates {
   base: string;
   rates: Record<string, number>;
   fetched_at: string;
 }
-
-// ─── Country ─────────────────────────────────────────────────────────────────
 
 export interface Country {
   name: string;

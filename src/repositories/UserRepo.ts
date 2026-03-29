@@ -55,9 +55,12 @@ export const UserRepo = {
 
   async update(id: number, data: Partial<Pick<User, 'name' | 'email' | 'role' | 'manager_id'>>): Promise<void> {
     const db = getDb();
-    const fields = Object.keys(data).map(k => `${k} = ?`).join(', ');
-    const values = [...Object.values(data), id];
-    await db.runAsync(`UPDATE users SET ${fields} WHERE id = ?`, values);
+    const entries = Object.entries(data).filter(([, value]) => value !== undefined);
+    if (entries.length === 0) return;
+
+    const fields = entries.map(([key]) => `${key} = ?`).join(', ');
+    const values = entries.map(([, value]) => value ?? null);
+    await db.runAsync(`UPDATE users SET ${fields} WHERE id = ?`, [...values, id] as any);
   },
 
   async delete(id: number): Promise<void> {

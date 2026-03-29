@@ -18,7 +18,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 
   return (
     <View style={[styles.badge, { backgroundColor: colors[status] + '20' }]}>
-      <Text style={[styles.badgeText, { color: colors[status] }]>
+      <Text style={[styles.badgeText, { color: colors[status] }]}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Text>
     </View>
